@@ -1,11 +1,11 @@
 ---
-title: "ISSS608-VAA"
+title: "ISSS608 Visual Analytics & Applications"
 ---
 
-This is a Quarto website.
+Welcome to **ISSS608 Visual Analytics & Applications**!
 
-To learn more about Quarto websites visit <https://quarto.org/docs/websites>.
+In this Webpage, I am going to share with you my learning journey in Visual Analytics.
 
-```{r}
-1 + 1
-```
+Module page: [VISUAL ANALYTICS & APPLICATIONS](https://isss608-ay2022-23apr.netlify.app/)
+
+Instructor: Prof Kam Tin Seong
