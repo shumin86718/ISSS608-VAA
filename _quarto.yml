@@ -15,6 +15,8 @@ website:
             href: xx
           - text: Hands-on Exercise 4
             href: xx
+          - text: Hands-on Exercise 5
+            href: xx
       - text: In-class Exercises
         menu: 
           - text: In-class Exercise 1
@@ -26,6 +28,8 @@ website:
           - text: In-class Exercise 4
             href: xx
           - text: In-class Exercise 5
+            href: xx
+          - text: In-class Exercise 6
             href: xx
       - text: Take-Home Exercises
         menu: 
