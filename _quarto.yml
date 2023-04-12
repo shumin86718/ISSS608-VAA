@@ -37,6 +37,11 @@ website:
             href: xx
           - text: Take-Home Exercise 2
             href: xx
+      - text: Group Project
+        menu: 
+          - text: R shinny Project
+            href: xx
+
     right:
       - href: index.qmd
         text: Home
