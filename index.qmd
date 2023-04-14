@@ -10,15 +10,28 @@ Module page: [VISUAL ANALYTICS & APPLICATIONS](https://isss608-ay2022-23apr.netl
 
 Instructor: Prof Kam Tin Seong
 
-| Lesson | Topic                                                                                                               | Date | Exercises covered |
-|----------|------------------------------------|----------|----------------|
-| 1      | [Introduction to Visual Analytics](https://isss608-ay2022-23apr.netlify.app/outline/Lesson01_outline.html)          | 15/4 |                   |
-| 2      | [Designing Graphs to Enlighten](https://isss608-ay2022-23apr.netlify.app/outline/Lesson02_outline.html)             | 29/4 |                   |
-| 3      | [Interactivity in Visual Analytics](https://isss608-ay2022-23apr.netlify.app/outline/Lesson03_outline.html)         | 6/5  |                   |
-| 4      | [Fundamentals of Visual Analytics](https://isss608-ay2022-23apr.netlify.app/outline/Lesson04_outline.html)          | 13/5 |                   |
-| 5      | [Visual Multivariate Analysis](https://isss608-ay2022-23apr.netlify.app/outline/Lesson05_outline.html)              | 20/5 |                   |
-| 6      | [It\'s About Time](https://isss608-ay2022-23apr.netlify.app/outline/Lesson06_outline.html)                          | 27/5 |                   |
-| 7      | [Visualising and Analysing Geographic Data](https://isss608-ay2022-23apr.netlify.app/outline/Lesson07_outline.html) | 3/6  |                   |
-| 8      | [Network Data Visualisation and Analysis](https://isss608-ay2022-23apr.netlify.app/outline/Lesson08_outline.html)   | 10/6 |                   |
-| 9      | [Information Dashboard Design](https://isss608-ay2022-23apr.netlify.app/outline/Lesson09_outline.html)              | 17/6 |                   |
-| 10     | [Visual Analytics of Financial Data](https://isss608-ay2022-23apr.netlify.app/outline/Lesson10_outline.html)        | 24/6 |                   |
++------------+---------------------------------------------------------------------------------------------------------------------+------------+-------------------+
+| Lesson     | Topic                                                                                                               | Date       | Exercises covered |
++============+=====================================================================================================================+============+===================+
+| 1          | [Introduction to Visual Analytics](https://isss608-ay2022-23apr.netlify.app/outline/Lesson01_outline.html)          | 15/4       | Hands-on Ex1      |
+|            |                                                                                                                     |            |                   |
+|            |                                                                                                                     |            | In-class Ex1      |
++------------+---------------------------------------------------------------------------------------------------------------------+------------+-------------------+
+| 2          | [Designing Graphs to Enlighten](https://isss608-ay2022-23apr.netlify.app/outline/Lesson02_outline.html)             | 29/4       |                   |
++------------+---------------------------------------------------------------------------------------------------------------------+------------+-------------------+
+| 3          | [Interactivity in Visual Analytics](https://isss608-ay2022-23apr.netlify.app/outline/Lesson03_outline.html)         | 6/5        |                   |
++------------+---------------------------------------------------------------------------------------------------------------------+------------+-------------------+
+| 4          | [Fundamentals of Visual Analytics](https://isss608-ay2022-23apr.netlify.app/outline/Lesson04_outline.html)          | 13/5       |                   |
++------------+---------------------------------------------------------------------------------------------------------------------+------------+-------------------+
+| 5          | [Visual Multivariate Analysis](https://isss608-ay2022-23apr.netlify.app/outline/Lesson05_outline.html)              | 20/5       |                   |
++------------+---------------------------------------------------------------------------------------------------------------------+------------+-------------------+
+| 6          | [It's About Time](https://isss608-ay2022-23apr.netlify.app/outline/Lesson06_outline.html)                           | 27/5       |                   |
++------------+---------------------------------------------------------------------------------------------------------------------+------------+-------------------+
+| 7          | [Visualising and Analysing Geographic Data](https://isss608-ay2022-23apr.netlify.app/outline/Lesson07_outline.html) | 3/6        |                   |
++------------+---------------------------------------------------------------------------------------------------------------------+------------+-------------------+
+| 8          | [Network Data Visualisation and Analysis](https://isss608-ay2022-23apr.netlify.app/outline/Lesson08_outline.html)   | 10/6       |                   |
++------------+---------------------------------------------------------------------------------------------------------------------+------------+-------------------+
+| 9          | [Information Dashboard Design](https://isss608-ay2022-23apr.netlify.app/outline/Lesson09_outline.html)              | 17/6       |                   |
++------------+---------------------------------------------------------------------------------------------------------------------+------------+-------------------+
+| 10         | [Visual Analytics of Financial Data](https://isss608-ay2022-23apr.netlify.app/outline/Lesson10_outline.html)        | 24/6       |                   |
++------------+---------------------------------------------------------------------------------------------------------------------+------------+-------------------+
