@@ -280,6 +280,15 @@ ggplot(data=exam_data,
            colour = GENDER)) +
   geom_density()
 ```
+
+### fill with arguments
+```{r}
+ggplot(data = exam_data, 
+       aes(x = MATHS, 
+           fill = GENDER)) +
+  geom_density()
+```
+
 :::
 
 ### 1.7.7 Geometric Objects: geom_boxplot
