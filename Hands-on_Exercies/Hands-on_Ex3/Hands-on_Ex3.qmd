@@ -3,7 +3,6 @@ title: "Hands-on Ex3 -  Programming Interactive Data Visualisation with R"
 editor: visual
 author: "Han Shumin"
 date: "26 Apr 2023"
-format: html
 execute: 
   warning: false
 ---
@@ -606,7 +605,7 @@ This [link](https://davidgohel.github.io/ggiraph/) provides online version of th
 
 -   [Plotly R Figure Reference](https://plotly.com/r/reference/index/) provides a comprehensive discussion of each visual representations.
 
--   [Plotly R Library Fundamentals](https://plotly.com/r/plotly-fundamentals/) is a good place to learn the fundamental features of Plotly\'s R API.
+-   [Plotly R Library Fundamentals](https://plotly.com/r/plotly-fundamentals/) is a good place to learn the fundamental features of Plotly's R API.
 
 -   [Getting Started](https://gganimate.com/articles/gganimate.html)
 
