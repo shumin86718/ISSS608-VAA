@@ -1,3 +1,8 @@
 ---
 title: "In-class_Ex3"
+editor: visual
+author: "Han Shumin"
+date: "29 Apr 2023"
+execute: 
+  warning: false
 ---

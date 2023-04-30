@@ -130,6 +130,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 <body class="nav-fixed">
 
+
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top">
     <nav class="navbar navbar-expand-lg navbar-dark ">
@@ -154,16 +155,16 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
  <span class="dropdown-text">Hands-on Exercise 1</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="../../xx">
+    <a class="dropdown-item" href="../../Hands-on_Exercies/Hands-on_Ex2/Hands-on_Ex2.html">
  <span class="dropdown-text">Hands-on Exercise 2</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="../../xx">
+    <a class="dropdown-item" href="../../Hands-on_Exercies/Hands-on_Ex3/Hands-on_Ex3.html">
  <span class="dropdown-text">Hands-on Exercise 3</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="../../xx">
- <span class="dropdown-text">Hands-on Exercise 4</span></a>
+    <a class="dropdown-item" href="../../Hands-on_Exercies/Hands-on_Ex3/Hands-on_Ex3-2.html">
+ <span class="dropdown-text">Hands-on Exercise 3-2</span></a>
   </li>  
         <li>
     <a class="dropdown-item" href="../../xx">
@@ -181,16 +182,12 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
  <span class="dropdown-text">In-class Exercise 1</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="../../xx">
- <span class="dropdown-text">In-class Exercise 2</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="../../xx">
+    <a class="dropdown-item" href="https://public.tableau.com/app/profile/shu.min.han/viz/In-class_Ex3_16827468503590/SalesvsProfit">
  <span class="dropdown-text">In-class Exercise 3</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="../../xx">
- <span class="dropdown-text">In-class Exercise 4</span></a>
+    <a class="dropdown-item" href="../../In-class_Exercies/In-class_Ex3/In-class_Ex3.html">
+ <span class="dropdown-text">In-class Exercise 3-2</span></a>
   </li>  
         <li>
     <a class="dropdown-item" href="../../xx">
@@ -467,7 +464,7 @@ of ggplot2 3.3.4.</code></pre>
 <p><img src="In-class_Ex1_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
-<p>The code first creates a copy of the original dataset called <code>d</code>, and then creates another copy called <code>d_bg</code> by removing the third column (which corresponds to the <code>RACE</code> variable) using the <code>[ , -3]</code> syntax. This is done because we want to create a histogram of <code>ENGLISH</code> scores for all pupils (regardless of their race) as a background to the histograms of male and female pupils.</p>
+<p>The code first creates a copy of the original dataset called <code>d</code>, and then creates another copy called <code>d_bg</code> by removing the maths and science columns using the <code>[ , -3]</code> syntax. This is done because we want to create a histogram of <code>ENGLISH</code> scores for all pupils as a background to the histograms of male and female pupils.</p>
 <p>Two <code>geom_histogram()</code> layers are added: the first one with the <code>data</code> argument set to <code>d_bg</code>, which creates a background histogram of <code>ENGLISH</code> scores for all pupils with a fill color of “grey” and an alpha value of 0.5 to make it semi-transparent. The second <code>geom_histogram()</code> layer creates a histogram of <code>ENGLISH</code> scores for male and female pupils separately, with black borders and default fill colors. The <code>facet_wrap()</code> function is used to create separate histograms for male and female pupils. Finally, the <code>guides()</code> function is used to remove the fill legend, and <code>theme_bw()</code> is used to set a black-and-white theme for the plot.</p>
 </section>
 </section>

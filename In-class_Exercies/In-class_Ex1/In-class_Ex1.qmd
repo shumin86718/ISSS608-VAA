@@ -150,7 +150,7 @@ ggplot(d, aes(x = ENGLISH, fill = GENDER)) +
 
 ```
 
-The code first creates a copy of the original dataset called `d`, and then creates another copy called `d_bg` by removing the third column (which corresponds to the `RACE` variable) using the `[ , -3]` syntax. This is done because we want to create a histogram of `ENGLISH` scores for all pupils (regardless of their race) as a background to the histograms of male and female pupils.
+The code first creates a copy of the original dataset called `d`, and then creates another copy called `d_bg` by removing the maths and science columns using the `[ , -3]` syntax. This is done because we want to create a histogram of `ENGLISH` scores for all pupils as a background to the histograms of male and female pupils.
 
 Two `geom_histogram()` layers are added: the first one with the `data` argument set to `d_bg`, which creates a background histogram of `ENGLISH` scores for all pupils with a fill color of "grey" and an alpha value of 0.5 to make it semi-transparent. The second `geom_histogram()` layer creates a histogram of `ENGLISH` scores for male and female pupils separately, with black borders and default fill colors. The `facet_wrap()` function is used to create separate histograms for male and female pupils. Finally, the `guides()` function is used to remove the fill legend, and `theme_bw()` is used to set a black-and-white theme for the plot.
 
