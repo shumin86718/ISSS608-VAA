@@ -1,0 +1,298 @@
+---
+title: "Take-home_Ex1 "
+editor: visual
+author: "Han Shumin"
+date: "2 May 2023"
+execute: 
+  warning: false
+---
+
+## **1. The Task**
+
+In this take-home exercise, we are required to apply the concepts and methods learned in Lesson 1-4 to reveal the demographic and financial characteristics of the city of Engagement, using appropriate **static and interactive statistical graphics** methods. This exercise requires a user-friendly and interactive solution that helps city managers and planners to explore complex data in an engaging way and reveal hidden patterns. The data should be processed by using the appropriate tidyverse family of packages and the statistical graphics must be prepared using ggplot2 and its extensions.
+
+## 
+
+## **2. Data Preparation**
+
+### 2.1 Installing and loading the required libraries
+
+First, write a code chunk to check, install and launch the following R packages:
+
+-   [**ggiraph**](https://davidgohel.github.io/ggiraph/) for making 'ggplot' graphics interactive.
+
+-   [**plotly**](https://plotly.com/r/), R library for plotting interactive statistical graphs.
+
+-   [**DT**](https://rstudio.github.io/DT/) provides an R interface to the JavaScript library [DataTables](https://datatables.net/) that create interactive table on html page.
+
+-   [**tidyverse**](https://www.tidyverse.org/), a family of modern R packages specially designed to support data science, analysis and communication task including creating static statistical graphs.
+
+-   [**patchwork**](https://patchwork.data-imaginist.com/) for combining multiple ggplot2 graphs into one figure.
+
+The code chunk below will be used to accomplish the task.
+
+```{r}
+pacman::p_load(ggiraph, plotly, 
+               patchwork, DT, tidyverse, dplyr, gganimate, ggridges, ggplot2, ggstatsplot, cowplot, ragg) 
+```
+
+### 2.2 Importing Data
+
+The code chunk below `read_csv()` of **readr** package is used to import *Participants.csv & FinancialJournal.csv* data file into R and save it as an tibble data frame called `participants` & `financial`.
+
+```{r}
+participants <- read_csv("data/participants.csv")
+financial <- read_csv("data/financialJournal.csv")
+```
+
+### 2.3 **Data Prep**
+
+| Issues                                                       | Description                                                                | Resolution |
+|--------------------------------------------------------------|----------------------------------------------------------------------------|------------|
+| timestamp issue                                              | some has time data, some don't have, exclude the time, leave only the date |            |
+| duplicate rows for edu and shelter cost                      | March edu and shelter payment are doubled                                  |            |
+| transpose the amount label by each category                  |                                                                            |            |
+| rent adjustment has already been added to March shelter cost |                                                                            |            |
+| convert expenses to positive num for easy ata analyze        |                                                                            |            |
+
+```{r}
+#Check for missing values
+any(is.na(participants))
+
+any(is.na(financial))
+```
+
+```{r}
+financial <- financial %>%
+  mutate(date= as.Date(timestamp)) %>%
+  mutate(yearmonth = format(financial$timestamp, "%Y-%m"))
+
+
+# remove duplicated rows
+financial <- distinct(financial) %>%
+  select(-timestamp) %>%
+  group_by(participantId, yearmonth, category) %>%
+  summarize(total_amount = sum(amount)) %>%
+  mutate(abs_amount = abs(total_amount))
+  
+financial$month <- substr(financial$yearmonth, 6, 7)
+```
+
+```{r}
+t <- list(
+  family = "Garamond",
+  size = 19,
+  face = "bold")
+
+t1 <- list(
+  family = "Garamond",
+  size = 15,
+  face = "bold")
+
+fig <- plot_ly(
+  data = financial,
+  y = ~abs_amount,
+  type = "box",
+  color = ~category,
+  colors = "YlGnBu",
+  showlegend = FALSE,
+  boxmean = TRUE
+) %>% 
+  layout(title= list(text = "Boxplot of financial status by category",font = t1),
+         xaxis = list(title = list(text ='category', font = t1)),
+         yaxis = list(title = list(text ='financial status', font
+                                   = t1)))
+
+fig
+```
+
+```{r}
+financial_t <- financial %>%
+  select(-total_amount) %>%
+  pivot_wider(
+    names_from = category,
+    values_from = abs_amount,
+    values_fn = sum,
+    values_fill = 0
+  ) %>%
+  select(-RentAdjustment) %>%
+  mutate(hourlyWage = Wage/(44*4))
+
+financial_t
+```
+
+```{r}
+merged <- merge(participants, financial, by = "participantId", all = TRUE)
+
+
+```
+
+```{r}
+fin_stats <- merged %>%
+  group_by(category, month) %>%
+  mutate(transaction_n = n()) %>%
+  mutate(median_amount = median(abs_amount)) %>%
+  select(category, transaction_n, median_amount, month) %>%
+  distinct() %>%
+  arrange(category)
+
+ggplot(fin_stats, aes(x = category, y = median_amount, 
+                      size = transaction_n, 
+                      colour = category)) +
+  geom_point(alpha = 0.7, show.legend = T) +
+  scale_size(range = c(2, 12)) +
+  labs(title = "Median expsense and wage over time (2022-03 to 2023-02)",
+       subtitle = "Month: {as.integer(frame_time)}", 
+       x = "Expenses and Wage", y = "Amount",
+       size = "No. of Transactions", color = "category") +
+  transition_time(as.integer(month)) +
+  ease_aes('linear') + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+        title = element_text(size = 12)) + 
+  scale_y_continuous(limits = c(25,7500))
+```
+
+Normality test
+
+```{r}
+merged_T <- merge(participants, financial_t, by = "participantId", all = TRUE)
+
+
+#computing summary statistics of mean, median and lower and upper whiskers in boxplot
+wage_mean <- round(mean(merged_T$Wage))
+wage_median <- round(median(merged_T$Wage))
+ymax <- as.numeric(round((IQR(merged_T$Wage)*1.5) +
+                quantile(merged_T$Wage,0.75)))
+ymin <- as.integer(min(merged_T$Wage))
+
+#plotting histogram
+h <- ggplot(data = merged_T, aes(x = Wage)) + 
+  geom_histogram(color="black", fill="azure4", binwidth = 300) + 
+  scale_x_continuous(limits = c(0,20000), labels = scales::comma) +
+  labs(x = "Income", y = "Number of transactions") +
+  geom_vline(aes(xintercept = wage_mean), col="darkblue", linewidth=1) +
+  annotate("text", x=5500, y=1150, label="Mean wage:", 
+           size=3, color="darkblue") +
+  annotate("text", x=5500, y=1100, label=format(wage_mean, big.mark = ","),
+           size=3, color="darkblue") +
+  geom_vline(aes(xintercept = wage_median), col="lightpink4", linewidth=1) +
+  annotate("text", x=2200, y=1150, label="Median wage", 
+           size=3, color="lightpink4") +
+  annotate("text", x=2200, y=1100, label=format(wage_median, big.mark = ","),
+           size=3, color="lightpink4") +
+  theme(axis.text.x = element_text(size=8))
+
+#plotting boxplot
+b <- ggplot(data = merged_T, aes(y = Wage)) + 
+  geom_boxplot(outlier.colour="firebrick", outlier.shape=12,
+               outlier.size=1, notch=FALSE) + 
+  coord_flip() + labs(y = "", x = "") + 
+  scale_y_continuous(limits = c(0,20000), labels = scales::comma) +
+  theme(axis.text = element_blank(), axis.ticks = element_blank()) + 
+  stat_boxplot(geom="errorbar", width=0.5) + 
+  annotate("text", x=0.35, y=ymax, label=format(ymax, big.mark = ","), 
+           size=3, color="lightpink4") +
+  annotate("text", x=0.35, y=ymin, label=format(ymin, big.mark = ","), 
+           size=3, color="lightpink4")
+
+#combining plots
+price_distri <- b / h + plot_layout(heights = c(1, 4)) 
+
+price_distri + plot_annotation(title = "Distribution of Icome status", 
+                               subtitle = "There is a right-skewed distribution i.e. mean income > median income. There is also a large number of outliers (income >$9,110).",
+                               theme = theme(
+                                 plot.title = element_text(size = 12),
+                                 plot.subtitle = element_text(size = 10)))
+
+```
+
+```{r fig.width=12, fig.height=15}
+set.seed(1234)
+
+#need to change bar colors, line color, ggtitles, gglabs
+
+p1 <- gghistostats(
+  data = merged_T,
+  x = joviality,
+  type = "bayes",
+  test.value = 60,
+  xlab = "Joviality") +
+  
+  theme_minimal() +
+  
+  theme(text = element_text(family = "Garamond"))
+        
+p2 <- gghistostats(
+  data = merged_T,
+  x = Education,
+  type = "bayes",
+  test.value = 60,
+  xlab = "Education expense"
+) +
+  theme_minimal() +
+  
+  theme(text = element_text(family = "Garamond"))
+
+p3 <- gghistostats(
+  data = merged_T,
+  x = Food,
+  type = "bayes",
+  test.value = 60,
+  xlab = "Food expense"
+) +
+  theme_minimal() +
+  
+  theme(text = element_text(family = "Garamond"))
+
+p4 <- gghistostats(
+  data = merged_T,
+  x = Recreation,
+  type = "bayes",
+  test.value = 60,
+  xlab = "Recreation expense"
+) +
+  theme_minimal()+
+  
+  theme(text = element_text(family = "Garamond"))
+
+p5 <- gghistostats(
+  data = merged_T,
+  x = Shelter,
+  type = "bayes",
+  test.value = 60,
+  xlab = "Housing expense"
+) +
+  theme_minimal()+
+  
+  theme(text = element_text(family = "Garamond"))
+
+p6 <- gghistostats(
+  data = merged_T,
+  x = Wage,
+  type = "bayes",
+  test.value = 60,
+  xlab = "Income"
+) +
+  theme_minimal()+
+  
+  theme(text = element_text(family = "Garamond"))
+
+plot_grid(p1, p2, p3, p4, p5, p6, ncol = 2)
+
+
+```
+
+Education level vs wage
+
+```{r}
+#plotting violin plot across regions
+
+
+ggbetweenstats(data = merged_T, x = educationLevel, y = Wage,
+               xlab = "education Level", ylab = "Income",
+               type = "np", pairwise.comparisons = T, pairwise.display = "ns", 
+               mean.ci = T, p.adjust.method = "fdr",  conf.level = 0.95,
+               title = "Comparison of Median Income across Education Level",
+               package = "ggthemes", palette = "Tableau_10") +
+  scale_y_continuous(limits = c(0, 7500))
+```

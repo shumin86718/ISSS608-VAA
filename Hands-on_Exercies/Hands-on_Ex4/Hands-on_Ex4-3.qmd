@@ -1,0 +1,8 @@
+---
+title: "Hands-on_Ex4-3 Funnel Plots for Fair Comparisons"
+editor: visual
+author: "Han Shumin"
+date: "5 May 2023"
+execute: 
+  warning: false
+---
