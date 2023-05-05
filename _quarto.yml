@@ -36,7 +36,7 @@ website:
       - text: Take-Home Exercises
         menu: 
           - text: Take-Home Exercise 1
-            href: xx
+            href: Take-home_Exercise/Take-home_Ex1/Take-home_Ex1.qmd
           - text: Take-Home Exercise 2
             href: xx
       - text: Group Project
