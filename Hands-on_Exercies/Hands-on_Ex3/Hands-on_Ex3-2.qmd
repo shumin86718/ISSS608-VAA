@@ -175,7 +175,10 @@ bp <- globalPop %>%
           hoverinfo = "text",
           type = 'scatter',
           mode = 'markers'
-          )
+          ) %>%
+  layout(xaxis = list(showgrid = TRUE, gridcolor = 'lightgrey', gridwidth = 0.5),
+         yaxis = list(showgrid = TRUE, gridcolor = 'lightgrey', gridwidth = 0.5))
+  
 bp
 ```
 

@@ -48,7 +48,7 @@ financial <- read_csv("data/financialJournal.csv")
 ### 2.3 **Data Prep**
 
 | Issues                                                       | Description                                                                | Resolution |
-|--------------------------------------------------------------|----------------------------------------------------------------------------|------------|
+|--------------------------|--------------------------------|---------------|
 | timestamp issue                                              | some has time data, some don't have, exclude the time, leave only the date |            |
 | duplicate rows for edu and shelter cost                      | March edu and shelter payment are doubled                                  |            |
 | transpose the amount label by each category                  |                                                                            |            |
@@ -214,8 +214,8 @@ set.seed(1234)
 p1 <- gghistostats(
   data = merged_T,
   x = joviality,
-  type = "bayes",
-  test.value = 60,
+  type = "nonparametric",
+  test.value = 0.6,
   xlab = "Joviality") +
   
   theme_minimal() +
@@ -237,7 +237,7 @@ p3 <- gghistostats(
   data = merged_T,
   x = Food,
   type = "bayes",
-  test.value = 60,
+  test.value = 550,
   xlab = "Food expense"
 ) +
   theme_minimal() +
@@ -248,7 +248,7 @@ p4 <- gghistostats(
   data = merged_T,
   x = Recreation,
   type = "bayes",
-  test.value = 60,
+  test.value = 1000,
   xlab = "Recreation expense"
 ) +
   theme_minimal()+
@@ -259,7 +259,7 @@ p5 <- gghistostats(
   data = merged_T,
   x = Shelter,
   type = "bayes",
-  test.value = 60,
+  test.value = 1500,
   xlab = "Housing expense"
 ) +
   theme_minimal()+
@@ -270,7 +270,7 @@ p6 <- gghistostats(
   data = merged_T,
   x = Wage,
   type = "bayes",
-  test.value = 60,
+  test.value = 6000,
   xlab = "Income"
 ) +
   theme_minimal()+
