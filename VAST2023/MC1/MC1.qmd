@@ -1,0 +1,33 @@
+---
+title: "MC1"
+editor: visual
+author: "Han Shumin"
+date: "6 May 2023"
+date-modified: "`r Sys.Date()`"
+format:
+  html:
+    code-fold: true
+    code-summary: "Show the code"
+execute: 
+  echo: true
+  eval: true
+  warning: false
+---
+
+```{r}
+pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, tidyverse)
+```
+
+```{r}
+MC1 <- fromJSON("data/MC1.json")
+```
+
+```{r}
+MC1_nodes <- as_tibble(MC1$nodes) %>%
+  select(id, type, country)
+```
+
+```{r}
+MC_edges <- as_tibble(MC1$links) %>%
+  select(source, target, type, weight, key)
+```

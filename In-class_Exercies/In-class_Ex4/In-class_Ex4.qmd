@@ -50,7 +50,7 @@ ggplot(exam_data,
 ```
 :::
 
-::: {.callout-note}
+::: callout-note
 We can see that the points deviate significantly from the straight diagonal line. This is a clear indication that the set of data is not normally distributed.
 :::
 
@@ -80,6 +80,7 @@ qq + table_png
 ```
 
 ## The code
+
 ```{r}
 #| eval: false
 qq <- ggplot(exam_data,
@@ -98,5 +99,3 @@ table_png <- png::readPNG(tmp, native =TRUE)
 qq + table_png
 ```
 :::
-
-

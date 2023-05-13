@@ -3,7 +3,14 @@ title: "Take-home_Ex1 "
 editor: visual
 author: "Han Shumin"
 date: "2 May 2023"
+date-modified: "`r Sys.Date()`"
+format:
+  html:
+    code-fold: true
+    code-summary: "Show the code"
 execute: 
+  echo: true
+  eval: true
   warning: false
 ---
 
@@ -32,8 +39,12 @@ First, write a code chunk to check, install and launch the following R packages:
 The code chunk below will be used to accomplish the task.
 
 ```{r}
+
+```
+
+```{r}
 pacman::p_load(ggiraph, plotly, 
-               patchwork, DT, tidyverse, dplyr, gganimate, ggridges, ggplot2, ggstatsplot, cowplot, ragg) 
+               patchwork, DT, tidyverse, dplyr, gganimate, ggridges, ggplot2, ggstatsplot, cowplot, ragg, ungeviz, ggdist, ggside) 
 ```
 
 ### 2.2 Importing Data
@@ -47,13 +58,13 @@ financial <- read_csv("data/financialJournal.csv")
 
 ### 2.3 **Data Prep**
 
-| Issues                                                       | Description                                                                | Resolution |
-|--------------------------|--------------------------------|---------------|
-| timestamp issue                                              | some has time data, some don't have, exclude the time, leave only the date |            |
-| duplicate rows for edu and shelter cost                      | March edu and shelter payment are doubled                                  |            |
-| transpose the amount label by each category                  |                                                                            |            |
-| rent adjustment has already been added to March shelter cost |                                                                            |            |
-| convert expenses to positive num for easy ata analyze        |                                                                            |            |
+| Issues                                                                                             | Description                                                      | Resolution                            |
+|-------------------------|-----------------------------|------------------|
+| timestamp issue                                                                                    | some has time data, some don't have,                             | exclude the time, leave only the date |
+| duplicate rows for edu and shelter cost                                                            | March edu and shelter payment are doubled for every participants | remove duplicates                     |
+| transpose the amount label by each category                                                        |                                                                  |                                       |
+| 131 participants had only March expenses, which may indicated they had no longer lived in the town | remove 131 paticipants from the merged dataframe                 |                                       |
+| convert expenses to positive num for easy data analyze                                             |                                                                  |                                       |
 
 ```{r}
 #Check for missing values
@@ -70,9 +81,12 @@ financial <- financial %>%
 
 # remove duplicated rows
 financial <- distinct(financial) %>%
-  select(-timestamp) %>%
-  group_by(participantId, yearmonth, category) %>%
-  summarize(total_amount = sum(amount)) %>%
+  select(-timestamp) %>%  #remove timestamp column
+  
+  # group data by participantId, yearmonth and category of expenses
+  group_by(participantId, yearmonth, category) %>%  
+  # to create total_amount by summerize the amount from each category
+    summarise(total_amount = sum(amount)) %>% 
   mutate(abs_amount = abs(total_amount))
   
 financial$month <- substr(financial$yearmonth, 6, 7)
@@ -122,6 +136,10 @@ financial_t
 ```
 
 ```{r}
+financial_t_r <- financial_t[financial_t$Shelter != 0, ]
+```
+
+```{r}
 merged <- merge(participants, financial, by = "participantId", all = TRUE)
 
 
@@ -155,7 +173,7 @@ ggplot(fin_stats, aes(x = category, y = median_amount,
 Normality test
 
 ```{r}
-merged_T <- merge(participants, financial_t, by = "participantId", all = TRUE)
+merged_T <- merge(participants, financial_t_r, by = "participantId", all = FALSE)
 
 
 #computing summary statistics of mean, median and lower and upper whiskers in boxplot
@@ -225,7 +243,7 @@ p1 <- gghistostats(
 p2 <- gghistostats(
   data = merged_T,
   x = Education,
-  type = "bayes",
+  type = "nonparametric",
   test.value = 60,
   xlab = "Education expense"
 ) +
@@ -236,7 +254,7 @@ p2 <- gghistostats(
 p3 <- gghistostats(
   data = merged_T,
   x = Food,
-  type = "bayes",
+  type = "nonparametric",
   test.value = 550,
   xlab = "Food expense"
 ) +
@@ -247,7 +265,7 @@ p3 <- gghistostats(
 p4 <- gghistostats(
   data = merged_T,
   x = Recreation,
-  type = "bayes",
+  type = "nonparametric",
   test.value = 1000,
   xlab = "Recreation expense"
 ) +
@@ -258,7 +276,7 @@ p4 <- gghistostats(
 p5 <- gghistostats(
   data = merged_T,
   x = Shelter,
-  type = "bayes",
+  type = "nonparametric",
   test.value = 1500,
   xlab = "Housing expense"
 ) +
@@ -269,7 +287,7 @@ p5 <- gghistostats(
 p6 <- gghistostats(
   data = merged_T,
   x = Wage,
-  type = "bayes",
+  type = "nonparametric",
   test.value = 6000,
   xlab = "Income"
 ) +
@@ -285,7 +303,7 @@ plot_grid(p1, p2, p3, p4, p5, p6, ncol = 2)
 Education level vs wage
 
 ```{r}
-#plotting violin plot across regions
+#plotting violin plot across wage
 
 
 ggbetweenstats(data = merged_T, x = educationLevel, y = Wage,
@@ -295,4 +313,117 @@ ggbetweenstats(data = merged_T, x = educationLevel, y = Wage,
                title = "Comparison of Median Income across Education Level",
                package = "ggthemes", palette = "Tableau_10") +
   scale_y_continuous(limits = c(0, 7500))
+```
+
+### Significant Test of Correlation between income and jovality
+
+```{r}
+ggscatterstats(
+  data = merged_T,
+  x = Wage,
+  y = joviality,
+  marginal = FALSE,
+  )
+```
+
+## Visualising Uncertainty
+
+```{r}
+ggplot(data = merged_T, 
+       (aes(x = factor(educationLevel), y = Wage))) +
+  geom_point(position = position_jitter(
+    height = 0.3, width = 0.05), 
+    size = 0.4, color = "#0072B2", alpha = 1/2) +
+  geom_hpline(data = sampler(25, group = educationLevel), height = 0.6, color = "#D55E00") +
+  theme_bw() + 
+  # `.draw` is a generated column indicating the sample draw
+  transition_states(.draw, 1, 3)
+```
+
+```{r}
+
+ggplot(data = merged_T, 
+                    aes(x = householdSize, y = Food)) +
+stat_pointinterval(point_interval = "median_qi",
+                   .width = c(0.95,0.99),
+                   point_color = "lightpink4") +
+labs(title = "Household size vs Food", x = "household size", y = "Food expenditure") + 
+theme(axis.text.x = element_text(angle = 0, vjust = 1, hjust=1)) +
+scale_y_continuous(limits = c(0, 500))
+```
+
+```{r}
+merged_T %>%
+  ggplot(aes(x = householdSize, 
+             y = Wage)) +
+  stat_gradientinterval(   
+    fill = "skyblue",      
+    show.legend = TRUE     
+  ) +                        
+  labs(
+    title = "Visualising confidence intervals of mean Income",
+    subtitle = "Gradient + interval plot")
+```
+
+### Significant Test of Correlation: Food and Income
+
+```{r}
+ggscatterstats(
+  data = merged_T,
+  x = Food,
+  y = Wage,
+  marginal = FALSE,
+  )
+```
+
+### Significant Test of Correlation: joviality and Recreation
+
+```{r}
+ggscatterstats(
+  data = merged_T,
+  x = Recreation,
+  y = joviality,
+  marginal = FALSE,
+  type = "nonparametric"
+  )
+```
+
+```{r}
+ggscatterstats(data = merged_T, 
+                           x = Recreation, y = joviality,
+                           type = "nonparametric") + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  labs(title = "Recreation vs joviality", 
+       x = "Recreation", y = "joviality") +
+  scale_x_continuous(limits = c(0, 2000)) +
+  scale_y_continuous(limits = c(0, 1))
+
+```
+
+```{r}
+ggscatterstats(data = merged_T, 
+                           x = joviality, y = Wage,
+                           type = "nonparametric") + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  labs(title = "joviality vs Wage", 
+       x = "joviality", y = "Wage") +
+  scale_x_continuous(limits = c(0, 1)) +
+  scale_y_continuous(limits = c(0, 25000))
+```
+
+### Significant Test of Association (Depedence) : *ggbarstats()* methods
+
+haveKids vs joviality
+
+```{r}
+merged_T1 <- merged_T %>% 
+  mutate(wage_bins = 
+               cut(Wage, 
+               breaks = quantile(Wage, probs = c(0, 0.25, 0.5, 0.75, 1)),
+               include.lowest = TRUE,
+               labels = c("Q1", "Q2", "Q3", "Q4")))
+
+ggbarstats(merged_T1, 
+           x = wage_bins, 
+           y = haveKids)
 ```

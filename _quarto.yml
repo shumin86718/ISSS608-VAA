@@ -21,6 +21,8 @@ website:
             href: Hands-on_Exercies/Hands-on_Ex4/Hands-on_Ex4-2.qmd 
           - text: Hands-on Exercise 4-3
             href: Hands-on_Exercies/Hands-on_Ex4/Hands-on_Ex4-3.qmd
+          - text: Hands-on Exercise 5
+            href: Hands-on_Exercies/Hands-on_Ex5/Hands-on_Ex5.qmd
       - text: In-class Exercises
         menu: 
           - text: In-class Exercise 1
@@ -31,8 +33,10 @@ website:
             href: In-class_Exercies/In-class_Ex3/In-class_Ex3.qmd
           - text: In-class Exercise 4
             href: In-class_Exercies/In-class_Ex4/In-class_Ex4.qmd
-          - text: In-class Exercise 6
-            href: xx
+          - text: In-class Exercise 5
+            href: In-class_Exercies/In-class_Ex5/In-class_Ex5.qmd
+          - text: In-class Exercise 5-2
+            href: VAST2023/MC1/MC1.qmd
       - text: Take-Home Exercises
         menu: 
           - text: Take-Home Exercise 1
