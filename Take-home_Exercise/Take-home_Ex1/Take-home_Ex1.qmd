@@ -1,9 +1,8 @@
 ---
-title: "Take-home_Ex1 "
+title: "Take-home Exercise 1 - Putting Visual Analytics into Practical Use"
 editor: visual
 author: "Han Shumin"
-date: "2 May 2023"
-date-modified: "`r Sys.Date()`"
+date: "14 May 2023"
 format:
   html:
     code-fold: true
@@ -14,13 +13,11 @@ execute:
   warning: false
 ---
 
-## **1. The Task**
+## 1. The Task
 
 In this take-home exercise, we are required to apply the concepts and methods learned in Lesson 1-4 to reveal the demographic and financial characteristics of the city of Engagement, using appropriate **static and interactive statistical graphics** methods. This exercise requires a user-friendly and interactive solution that helps city managers and planners to explore complex data in an engaging way and reveal hidden patterns. The data should be processed by using the appropriate tidyverse family of packages and the statistical graphics must be prepared using ggplot2 and its extensions.
 
-## 
-
-## **2. Data Preparation**
+## 2. Data Preparation
 
 ### 2.1 Installing and loading the required libraries
 
@@ -39,12 +36,8 @@ First, write a code chunk to check, install and launch the following R packages:
 The code chunk below will be used to accomplish the task.
 
 ```{r}
-
-```
-
-```{r}
 pacman::p_load(ggiraph, plotly, 
-               patchwork, DT, tidyverse, dplyr, gganimate, ggridges, ggplot2, ggstatsplot, cowplot, ragg, ungeviz, ggdist, ggside) 
+               patchwork, DT, tidyverse, dplyr, gganimate, ggridges, ggplot2, ggstatsplot, cowplot, ragg, ungeviz, ggdist, ggside, viridis) 
 ```
 
 ### 2.2 Importing Data
@@ -56,15 +49,20 @@ participants <- read_csv("data/participants.csv")
 financial <- read_csv("data/financialJournal.csv")
 ```
 
-### 2.3 **Data Prep**
+### 2.3 Data Preperation
 
-| Issues                                                                                             | Description                                                      | Resolution                            |
-|-------------------------|-----------------------------|------------------|
-| timestamp issue                                                                                    | some has time data, some don't have,                             | exclude the time, leave only the date |
-| duplicate rows for edu and shelter cost                                                            | March edu and shelter payment are doubled for every participants | remove duplicates                     |
-| transpose the amount label by each category                                                        |                                                                  |                                       |
-| 131 participants had only March expenses, which may indicated they had no longer lived in the town | remove 131 paticipants from the merged dataframe                 |                                       |
-| convert expenses to positive num for easy data analyze                                             |                                                                  |                                       |
+we will examine the structure of the data frame using *glimpse()* of **dplyr**.
+
+```{r}
+glimpse(participants)
+
+```
+
+```{r}
+glimpse(financial)
+```
+
+The code chunk below will be used to perform the missing value checking.
 
 ```{r}
 #Check for missing values
@@ -73,7 +71,28 @@ any(is.na(participants))
 any(is.na(financial))
 ```
 
++----------------------------------------------------------+-------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------+
+| Issues                                                   | Description                                                                                                 | Resolution                                                                                                                                         |
++==========================================================+=============================================================================================================+====================================================================================================================================================+
+| timestamp                                                | Some rows have time data while some rows don't.                                                             | As the time data doesn't help with the analysis, we should exclude the time data, leave only the date. And extract month to create month variable. |
++----------------------------------------------------------+-------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------+
+| Data Duplicates                                          | Duplicate entries for Education and Shelter expenses on 1^st^ March 2022                                    | Remove the duplicates                                                                                                                              |
++----------------------------------------------------------+-------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------+
+| Incompleted records for a specific group of participants | There are 131 participants who had only March expenses, which may indicate they no longer lived in the town | Remove 131 participants from the merged dataframe                                                                                                  |
++----------------------------------------------------------+-------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------+
+| Inappropriate table format                               | Expenses and income are aggregated in one category variable                                                 | Transpose the amount of expense and income to individual variable labeled by the category for financial table                                      |
++----------------------------------------------------------+-------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------+
+| Table merge                                              | The participants data and fanciancial data are in two tables                                                | For ease data analysis, we should merge two tables together and grouped the records by participantId and month                                     |
++----------------------------------------------------------+-------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------+
+| New variables create                                     | Create expenditures and savings for participants financial health analysis                                  | Expenditures should includes Education, Food, Recreation, Shelter cost.                                                                            |
+|                                                          |                                                                                                             |                                                                                                                                                    |
+|                                                          |                                                                                                             | Savings should be Wage minus the expenditures.                                                                                                     |
++----------------------------------------------------------+-------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------+
+
+Below code chunks will work on the above data issues and create the final merged dataframe `merged_T.`
+
 ```{r}
+#convert timestamp to date type and extract yearmonth variable
 financial <- financial %>%
   mutate(date= as.Date(timestamp)) %>%
   mutate(yearmonth = format(financial$timestamp, "%Y-%m"))
@@ -85,42 +104,19 @@ financial <- distinct(financial) %>%
   
   # group data by participantId, yearmonth and category of expenses
   group_by(participantId, yearmonth, category) %>%  
-  # to create total_amount by summerize the amount from each category
+  
+  # to create total_amount by summerize the amount from each category, convert the amount of expenditures to positive nums
     summarise(total_amount = sum(amount)) %>% 
   mutate(abs_amount = abs(total_amount))
-  
-financial$month <- substr(financial$yearmonth, 6, 7)
+
+#create month variable and convert to integer
+financial$month <- as.integer(substr(financial$yearmonth, 6, 7))
+#convert abs_amount as integer
+financial$abs_amount <- round(financial$abs_amount, 0)
 ```
 
 ```{r}
-t <- list(
-  family = "Garamond",
-  size = 19,
-  face = "bold")
-
-t1 <- list(
-  family = "Garamond",
-  size = 15,
-  face = "bold")
-
-fig <- plot_ly(
-  data = financial,
-  y = ~abs_amount,
-  type = "box",
-  color = ~category,
-  colors = "YlGnBu",
-  showlegend = FALSE,
-  boxmean = TRUE
-) %>% 
-  layout(title= list(text = "Boxplot of financial status by category",font = t1),
-         xaxis = list(title = list(text ='category', font = t1)),
-         yaxis = list(title = list(text ='financial status', font
-                                   = t1)))
-
-fig
-```
-
-```{r}
+#transpose amount labeled by category 
 financial_t <- financial %>%
   select(-total_amount) %>%
   pivot_wider(
@@ -129,13 +125,15 @@ financial_t <- financial %>%
     values_fn = sum,
     values_fill = 0
   ) %>%
-  select(-RentAdjustment) %>%
-  mutate(hourlyWage = Wage/(44*4))
+  select(-RentAdjustment) %>%  #remove RentAdjustment as it already accounted in March Shelter cost
+  
+  mutate(hourlyWage = round(Wage/(44*4)), 0) #based on weekly 44 hours working hours and a month has 4 weeks
 
 financial_t
 ```
 
 ```{r}
+#Remove the 131 no. participants which only have March expenses
 financial_t_r <- financial_t[financial_t$Shelter != 0, ]
 ```
 
@@ -143,39 +141,23 @@ financial_t_r <- financial_t[financial_t$Shelter != 0, ]
 merged <- merge(participants, financial, by = "participantId", all = TRUE)
 
 
+#merge participantid and financial tables
+merged_T <- merge(participants, financial_t_r, by = "participantId", all = FALSE) %>%
+  mutate(expenditure = Education + Food + Recreation + Shelter) %>%
+  mutate(savings = Wage - expenditure) %>%
+  select(participantId, yearmonth, month, householdSize, haveKids, age, educationLevel, joviality, Wage, hourlyWage, expenditure, savings, Education, Food, Recreation, Shelter)
+
+#convert joviality column as percentage and round to 2 decimal places
+merged_T$joviality <- round(merged_T$joviality*100, 2)
+
+
 ```
 
-```{r}
-fin_stats <- merged %>%
-  group_by(category, month) %>%
-  mutate(transaction_n = n()) %>%
-  mutate(median_amount = median(abs_amount)) %>%
-  select(category, transaction_n, median_amount, month) %>%
-  distinct() %>%
-  arrange(category)
+## 3. Data Visulisation
 
-ggplot(fin_stats, aes(x = category, y = median_amount, 
-                      size = transaction_n, 
-                      colour = category)) +
-  geom_point(alpha = 0.7, show.legend = T) +
-  scale_size(range = c(2, 12)) +
-  labs(title = "Median expsense and wage over time (2022-03 to 2023-02)",
-       subtitle = "Month: {as.integer(frame_time)}", 
-       x = "Expenses and Wage", y = "Amount",
-       size = "No. of Transactions", color = "category") +
-  transition_time(as.integer(month)) +
-  ease_aes('linear') + 
-  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
-        title = element_text(size = 12)) + 
-  scale_y_continuous(limits = c(25,7500))
-```
-
-Normality test
+### 3.1 Visualising Distribution for Income and Expenditure
 
 ```{r}
-merged_T <- merge(participants, financial_t_r, by = "participantId", all = FALSE)
-
-
 #computing summary statistics of mean, median and lower and upper whiskers in boxplot
 wage_mean <- round(mean(merged_T$Wage))
 wage_median <- round(median(merged_T$Wage))
@@ -216,13 +198,71 @@ b <- ggplot(data = merged_T, aes(y = Wage)) +
 #combining plots
 price_distri <- b / h + plot_layout(heights = c(1, 4)) 
 
-price_distri + plot_annotation(title = "Distribution of Icome status", 
-                               subtitle = "There is a right-skewed distribution i.e. mean income > median income. There is also a large number of outliers (income >$9,110).",
+price_distri + plot_annotation(title = "Distribution of Income status", 
+                               subtitle = "There is a right-skewed distribution \ni.e. mean income > median income. There is also a large number of outliers (income >$9,166).",
                                theme = theme(
                                  plot.title = element_text(size = 12),
                                  plot.subtitle = element_text(size = 10)))
 
 ```
+
+The Income plot shows right-skewed distribution, ie. mean income is larger than median income and there are large amount of outliers.
+
+```{r}
+
+#computing summary statistics of mean, median and lower and upper whiskers in boxplot
+expense_mean <- round(mean(merged_T$expenditure))
+expense_median <- round(median(merged_T$expenditure))
+ymax <- as.numeric(round((IQR(merged_T$expenditure)*1.5) +
+                quantile(merged_T$expenditure,0.75)))
+ymin <- as.integer(min(merged_T$expenditure))
+
+#plotting histogram
+h <- ggplot(data = merged_T, aes(x = expenditure)) + 
+  geom_histogram(color="black", fill="azure4", binwidth = 50) + 
+  scale_x_continuous(limits = c(0,5000), labels = scales::comma) +
+  labs(x = "Expenditure", y = "Number of transactions") +
+  geom_vline(aes(xintercept = expense_mean), col="darkblue", linewidth=1) +
+  annotate("text", x=1000, y=750, label="Mean expense:", 
+           size=3, color="darkblue") +
+  annotate("text", x=1000, y=710, label=format(expense_mean, big.mark = ","),
+           size=3, color="darkblue") +
+  geom_vline(aes(xintercept = expense_median), col="lightpink4", linewidth=1) +
+  annotate("text", x=2000, y=750, label="Median expense", 
+           size=3, color="lightpink4") +
+  annotate("text", x=2000, y=710, label=format(expense_median, big.mark = ","),
+           size=3, color="lightpink4") +
+  theme(axis.text.x = element_text(size=8))
+
+#plotting boxplot
+b <- ggplot(data = merged_T, aes(y = expenditure)) + 
+  geom_boxplot(outlier.colour="firebrick", outlier.shape=12,
+               outlier.size=1, notch=FALSE) + 
+  coord_flip() + labs(y = "", x = "") + 
+  scale_y_continuous(limits = c(0,5000), labels = scales::comma) +
+  theme(axis.text = element_blank(), axis.ticks = element_blank()) + 
+  stat_boxplot(geom="errorbar", width=0.5) + 
+  annotate("text", x=0.35, y=ymax, label=format(ymax, big.mark = ","), 
+           size=3, color="lightpink4") +
+  annotate("text", x=0.35, y=ymin, label=format(ymin, big.mark = ","), 
+           size=3, color="lightpink4")
+
+#combining plots
+price_distri <- b / h + plot_layout(heights = c(1, 4)) 
+
+price_distri + plot_annotation(title = "Distribution of Expenditure status", 
+                               subtitle = "The plot doesn't show normally distribution \n although mean and median are nearly the same. There is also a large number of outliers (income >$2,360).",
+                               theme = theme(
+                                 plot.title = element_text(size = 12),
+                                 plot.subtitle = element_text(size = 10)))
+
+```
+
+Also the mean and median of the expenditures are nearly the same, however the disturbition plot does not show normally distribution, and there are large amount of outliers as well.
+
+### 3.2 Confirmatory Test for Normality
+
+To use the one-sample test in gghistostats() to test if the numerical variables are normally distributed, we set the type argument to "shapiro".
 
 ```{r fig.width=12, fig.height=15}
 set.seed(1234)
@@ -232,7 +272,7 @@ set.seed(1234)
 p1 <- gghistostats(
   data = merged_T,
   x = joviality,
-  type = "nonparametric",
+  type = "shapiro",
   test.value = 0.6,
   xlab = "Joviality") +
   
@@ -242,10 +282,10 @@ p1 <- gghistostats(
         
 p2 <- gghistostats(
   data = merged_T,
-  x = Education,
-  type = "nonparametric",
+  x = Wage,
+  type = "shapiro",
   test.value = 60,
-  xlab = "Education expense"
+  xlab = "Wage"
 ) +
   theme_minimal() +
   
@@ -253,10 +293,10 @@ p2 <- gghistostats(
 
 p3 <- gghistostats(
   data = merged_T,
-  x = Food,
-  type = "nonparametric",
+  x = expenditure,
+  type = "shapiro",
   test.value = 550,
-  xlab = "Food expense"
+  xlab = "Expenditure"
 ) +
   theme_minimal() +
   
@@ -264,97 +304,245 @@ p3 <- gghistostats(
 
 p4 <- gghistostats(
   data = merged_T,
-  x = Recreation,
-  type = "nonparametric",
+  x = savings,
+  type = "shapiro",
   test.value = 1000,
-  xlab = "Recreation expense"
+  xlab = "Savings"
 ) +
   theme_minimal()+
   
   theme(text = element_text(family = "Garamond"))
 
-p5 <- gghistostats(
-  data = merged_T,
-  x = Shelter,
-  type = "nonparametric",
-  test.value = 1500,
-  xlab = "Housing expense"
-) +
-  theme_minimal()+
-  
-  theme(text = element_text(family = "Garamond"))
 
-p6 <- gghistostats(
-  data = merged_T,
-  x = Wage,
-  type = "nonparametric",
-  test.value = 6000,
-  xlab = "Income"
-) +
-  theme_minimal()+
-  
-  theme(text = element_text(family = "Garamond"))
 
-plot_grid(p1, p2, p3, p4, p5, p6, ncol = 2)
+plot_grid(p1, p2, p3, p4, ncol = 2)
 
 
 ```
 
-Education level vs wage
+Shapiro-Wilk test statistics have all 4 numbers of p value \<0.05 within the 95% CI level for Joviality, Wage, Expenditure and savings, this suggests that there is enough statistically evidence to confirm the distributions for above numerical variables are not normally distributed.
+
+### 3.3 Median expense, savings and Income change over time
+
+```{r}
+fin_stats <- merged %>%
+  group_by(category, month) %>%
+  mutate(transaction_n = n()) %>%
+  mutate(median_amount = median(abs_amount)) %>%
+  select(category, transaction_n, median_amount, month) %>%
+  distinct() %>%
+  arrange(category)
+
+ggplot(fin_stats, aes(x = category, y = median_amount, 
+                      size = transaction_n, 
+                      colour = category)) +
+  geom_point(alpha = 0.7, show.legend = T) +
+  scale_size(range = c(2, 12)) +
+  labs(title = "Median expsense and wage over time (2022-03 to 2023-02)",
+       subtitle = "Month: {as.integer(frame_time)}", 
+       x = "Expenses and Wage", y = "Amount",
+       size = "No. of Transactions", color = "category") +
+  transition_time(as.integer(month)) +
+  ease_aes('linear') + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+        title = element_text(size = 12)) + 
+  scale_y_continuous(limits = c(25,7500))
+```
+
+From the plot, we can observe that median expenses on education and food are the least and are stable throughout the year. Spending for recreation are in between shelter and other expenditures, and has higher spending during the month of March. The median Income is generally stable expect in the month of March which is almost doubled than rest of the months.
+
+### 3.5 Education Level
+
+#### 3.5.1 Education Level vs Income
+
+In the code chunk below, [*ggbetweenstats()*](https://indrajeetpatil.github.io/ggstatsplot/reference/ggbetweenstats.html) is used to build a visual for One-way ANOVA test on Wage by Education Level (non-parametric since we had known Wage is not normally distributed).
 
 ```{r}
 #plotting violin plot across wage
 
-
-ggbetweenstats(data = merged_T, x = educationLevel, y = Wage,
-               xlab = "education Level", ylab = "Income",
-               type = "np", pairwise.comparisons = T, pairwise.display = "ns", 
-               mean.ci = T, p.adjust.method = "fdr",  conf.level = 0.95,
-               title = "Comparison of Median Income across Education Level",
-               package = "ggthemes", palette = "Tableau_10") +
-  scale_y_continuous(limits = c(0, 7500))
-```
-
-### Significant Test of Correlation between income and jovality
-
-```{r}
-ggscatterstats(
+ggbetweenstats(
   data = merged_T,
-  x = Wage,
-  y = joviality,
-  marginal = FALSE,
-  )
+  x = educationLevel, 
+  y = Wage,
+  type = "np",
+  mean.ci = TRUE, 
+  pairwise.comparisons = TRUE, 
+  pairwise.display = "s",
+  p.adjust.method = "fdr",
+  messages = FALSE
+)
+
+
 ```
 
-## Visualising Uncertainty
+From the Oneway Anova Test results, we observe that 4 different education levels have a higher number of significantly different relationships. This shows that there are indeed differences in Income status in each education levels.
+
+The box plot shows that mediBacheloran income for residences with high education levels (Graduate, Bachelors) are higher than Low and high school or College levels.
+
+#### 3.5.2 Education Level vs Expenditure
+
+::: panel-tabset
+## Education Level
 
 ```{r}
-ggplot(data = merged_T, 
-       (aes(x = factor(educationLevel), y = Wage))) +
-  geom_point(position = position_jitter(
-    height = 0.3, width = 0.05), 
-    size = 0.4, color = "#0072B2", alpha = 1/2) +
-  geom_hpline(data = sampler(25, group = educationLevel), height = 0.6, color = "#D55E00") +
-  theme_bw() + 
-  # `.draw` is a generated column indicating the sample draw
-  transition_states(.draw, 1, 3)
+ggplot(na.omit(merged_T),aes(x = educationLevel, y = expenditure)) +
+  
+  geom_boxplot(aes(fill = as.factor(month)), color = "#c0c0c0") +
+  
+  stat_summary(fun.y = "median", geom = "point", color = "black") +
+  
+  theme_minimal() +
+  
+  scale_fill_brewer(palette = "Paired") +
+
+ labs( title = "Monthly expenditure by Education Level",
+       y = "Expenditure",
+       x = "Education Level",
+       fill = "Month") +
+
+theme(text = element_text(family = "Garamond"),
+        plot.title = element_text(hjust = 0.5, size = 12, face = 'bold'),
+        plot.margin = margin(20, 20, 20, 20),
+        legend.position = "bottom",
+        
+        axis.text = element_text(size = 10, face = "bold"),
+        axis.title.x = element_text(hjust = 0.5, size = 12, face = "bold"),
+        axis.title.y = element_text(hjust = 0.5, size = 12, face = "bold"))
 ```
+
+## Graduate
 
 ```{r}
+na.omit(merged_T) %>% 
+  filter(educationLevel == "Graduate") %>% 
+  ggplot(aes(x = educationLevel, y = expenditure)) +
+  
+  geom_boxplot(aes(fill = as.factor(month)), color = "#c0c0c0") +
+  
+  stat_summary(fun.y = "median", geom = "point", color = "black") +
+  
+  theme_minimal() +
+  
+  scale_fill_brewer(palette = "Paired") +
 
-ggplot(data = merged_T, 
-                    aes(x = householdSize, y = Food)) +
-stat_pointinterval(point_interval = "median_qi",
-                   .width = c(0.95,0.99),
-                   point_color = "lightpink4") +
-labs(title = "Household size vs Food", x = "household size", y = "Food expenditure") + 
-theme(axis.text.x = element_text(angle = 0, vjust = 1, hjust=1)) +
-scale_y_continuous(limits = c(0, 500))
+ labs( title = "Monthly expenditure by Graduate",
+       y = "Expenditure",
+       x = "Education Level",
+       fill = "Month") +
+
+theme(text = element_text(family = "Garamond"),
+        plot.title = element_text(hjust = 0.5, size = 12, face = 'bold'),
+        plot.margin = margin(20, 20, 20, 20),
+        legend.position = "bottom",
+        
+        axis.text = element_text(size = 10, face = "bold"),
+        axis.title.x = element_text(hjust = 0.5, size = 12, face = "bold"),
+        axis.title.y = element_text(hjust = 0.5, size = 12, face = "bold"))
 ```
+
+## Bachelors
+
+```{r}
+# Bachelors
+na.omit(merged_T) %>% 
+  filter(educationLevel == "Bachelors") %>% 
+  ggplot(aes(x = educationLevel, y = expenditure)) +
+  
+  geom_boxplot(aes(fill = as.factor(month)), color = "#c0c0c0") +
+  
+  stat_summary(fun.y = "median", geom = "point", color = "black") +
+  
+  theme_minimal() +
+  
+  scale_fill_brewer(palette = "Paired") +
+
+ labs( title = "Monthly expenditure by Bachelors",
+       y = "Expenditure",
+       x = "Education Level",
+       fill = "Month") +
+
+theme(text = element_text(family = "Garamond"),
+        plot.title = element_text(hjust = 0.5, size = 12, face = 'bold'),
+        plot.margin = margin(20, 20, 20, 20),
+        legend.position = "bottom",
+        
+        axis.text = element_text(size = 10, face = "bold"),
+        axis.title.x = element_text(hjust = 0.5, size = 12, face = "bold"),
+        axis.title.y = element_text(hjust = 0.5, size = 12, face = "bold"))
+```
+
+## HighSchoolOrCollege
+
+```{r}
+# Bachelors
+na.omit(merged_T) %>% 
+  filter(educationLevel == "HighSchoolOrCollege") %>% 
+  ggplot(aes(x = educationLevel, y = expenditure)) +
+  
+  geom_boxplot(aes(fill = as.factor(month)), color = "#c0c0c0") +
+  
+  stat_summary(fun.y = "median", geom = "point", color = "black") +
+  
+  theme_minimal() +
+  
+  scale_fill_brewer(palette = "Paired") +
+
+ labs( title = "Monthly expenditure by HighSchoolOrCollege",
+       y = "Expenditure",
+       x = "Education Level",
+       fill = "Month") +
+
+theme(text = element_text(family = "Garamond"),
+        plot.title = element_text(hjust = 0.5, size = 12, face = 'bold'),
+        plot.margin = margin(20, 20, 20, 20),
+        legend.position = "bottom",
+        
+        axis.text = element_text(size = 10, face = "bold"),
+        axis.title.x = element_text(hjust = 0.5, size = 12, face = "bold"),
+        axis.title.y = element_text(hjust = 0.5, size = 12, face = "bold"))
+```
+
+## Low
+
+```{r}
+# Bachelors
+na.omit(merged_T) %>% 
+  filter(educationLevel == "Low") %>% 
+  ggplot(aes(x = educationLevel, y = expenditure)) +
+  
+  geom_boxplot(aes(fill = as.factor(month)), color = "#c0c0c0") +
+  
+  stat_summary(fun.y = "median", geom = "point", color = "black") +
+  
+  theme_minimal() +
+  
+  scale_fill_brewer(palette = "Paired") +
+
+ labs( title = "Monthly expenditure by Low",
+       y = "Expenditure",
+       x = "Education Level",
+       fill = "Month") +
+
+theme(text = element_text(family = "Garamond"),
+        plot.title = element_text(hjust = 0.5, size = 12, face = 'bold'),
+        plot.margin = margin(20, 20, 20, 20),
+        legend.position = "bottom",
+        
+        axis.text = element_text(size = 10, face = "bold"),
+        axis.title.x = element_text(hjust = 0.5, size = 12, face = "bold"),
+        axis.title.y = element_text(hjust = 0.5, size = 12, face = "bold"))
+```
+:::
+
+The best metric for comparison over time and distribution is the median (they are unaffected by outliers). In the graph above, we observe that there is no discernible difference in the median expenditures for 4 education levels. However, we observed expenses in March are higher than the rest of the time across all education levels.
+
+#### 3.5.2 Visualising Uncertainty of median Income by Education Level
+
+In the code chunk below, stat_gradientinterval() of ggdist is used to build a visual for displaying distribution of Income by Education Level
 
 ```{r}
 merged_T %>%
-  ggplot(aes(x = householdSize, 
+  ggplot(aes(x = educationLevel, 
              y = Wage)) +
   stat_gradientinterval(   
     fill = "skyblue",      
@@ -365,65 +553,84 @@ merged_T %>%
     subtitle = "Gradient + interval plot")
 ```
 
-### Significant Test of Correlation: Food and Income
+As shown above, income have higher uncertainties on higher education level eg. Gradute and Bachelors. This could be potentially due to large presence of outliers in both education levels. On the opposite side, income for medium and low education level have lower uncertainties, which might indicate lower presence of outliers.
+
+### 3.6 Joviality
+
+#### 3.6.1 Significant Test of Correlation: joviality and wage by having Kids
 
 ```{r}
-ggscatterstats(
-  data = merged_T,
-  x = Food,
-  y = Wage,
-  marginal = FALSE,
-  )
-```
-
-### Significant Test of Correlation: joviality and Recreation
-
-```{r}
-ggscatterstats(
-  data = merged_T,
-  x = Recreation,
-  y = joviality,
-  marginal = FALSE,
-  type = "nonparametric"
-  )
-```
-
-```{r}
-ggscatterstats(data = merged_T, 
-                           x = Recreation, y = joviality,
-                           type = "nonparametric") + 
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
-  labs(title = "Recreation vs joviality", 
-       x = "Recreation", y = "joviality") +
-  scale_x_continuous(limits = c(0, 2000)) +
-  scale_y_continuous(limits = c(0, 1))
-
-```
-
-```{r}
-ggscatterstats(data = merged_T, 
-                           x = joviality, y = Wage,
-                           type = "nonparametric") + 
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
-  labs(title = "joviality vs Wage", 
+f1 <- merged_T %>% 
+  filter(haveKids == TRUE) %>%
+  ggscatterstats(x = joviality, y = Wage, 
+                 type = "nonparametric") + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  labs(title = "joviality vs Wage (Have Kids)", 
        x = "joviality", y = "Wage") +
-  scale_x_continuous(limits = c(0, 1)) +
+  scale_x_continuous(limits = c(0, 100)) +
   scale_y_continuous(limits = c(0, 25000))
+
+f2 <- merged_T %>% 
+  filter(haveKids == FALSE) %>%
+  ggscatterstats(x = joviality, y = Wage, 
+                 type = "nonparametric") + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  labs(title = "joviality vs Wage (No Kids)", 
+       x = "joviality", y = "Wage") +
+  scale_x_continuous(limits = c(0, 100)) +
+  scale_y_continuous(limits = c(0, 25000))
+
+plot_grid(f1, f2, ncol = 1)
+
 ```
 
-### Significant Test of Association (Depedence) : *ggbarstats()* methods
+The correlation chart shows that there is a weak negative relationship (less than -0.5) between the joviality and Income level by having kids or not. The observation indicates that wealth does not unequivocally increase happiness. however, it is turned another way round. And between having or not having kids, the correlation relationship don't have very much differences.
 
-haveKids vs joviality
+#### 3.6.2 Significant Test of Correlation: joviality and expenditure by househould size
 
-```{r}
-merged_T1 <- merged_T %>% 
-  mutate(wage_bins = 
-               cut(Wage, 
-               breaks = quantile(Wage, probs = c(0, 0.25, 0.5, 0.75, 1)),
-               include.lowest = TRUE,
-               labels = c("Q1", "Q2", "Q3", "Q4")))
+```{r fig.width=10, fig.height=10}
+j1 <- merged_T %>% 
+  filter(householdSize == 1) %>%
+  ggscatterstats(x = joviality, y = expenditure,
+                             type = "nonparametric") + 
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),
+            plot.title = element_text(size = 10, face = "bold")) +
+    labs(title = "joviality vs Expenditure for household size 1", 
+         x = "joviality", y = "Wage") +
+    scale_x_continuous(limits = c(0, 100)) +
+    scale_y_continuous(limits = c(0, 5000))
 
-ggbarstats(merged_T1, 
-           x = wage_bins, 
-           y = haveKids)
+j2 <- merged_T %>% 
+  filter(householdSize == 2) %>%
+  ggscatterstats(x = joviality, y = expenditure,
+                             type = "nonparametric") + 
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),
+            plot.title = element_text(size = 10, face = "bold")) +
+    labs(title = "joviality vs Expenditure for household size 2", 
+         x = "joviality", y = "Wage") +
+    scale_x_continuous(limits = c(0, 100)) +
+    scale_y_continuous(limits = c(0, 5000))
+
+j3 <- merged_T %>% 
+  filter(householdSize == 3) %>%
+  ggscatterstats(x = joviality, y = expenditure,
+                             type = "nonparametric") + 
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1), plot.title = element_text(size = 10, face = "bold")) +
+    labs(title = "joviality vs Expenditure for household size 3", 
+         x = "joviality", y = "Wage") +
+    scale_x_continuous(limits = c(0, 100)) +
+    scale_y_continuous(limits = c(0, 5000))
+
+plot_grid(j1, j2, j3, ncol = 1)
+
 ```
+
+The correlation chart shows that there is a strong positive relationship (more than 0.5) between the joviality and Expenditure level by the household sizes. The observation indicates that as joviality increases, the expenditure level tends to increase as well. This indicates that households with higher levels of joviality tend to have higher expenditure levels. And between the different sizes of household, the correlation relationship has higher value for household size 2 category.
+
+## Conclusion and Recommendation
+
+The following interpretations and recommendations are made:
+
+1.  Family with higher education level had income earned more than medium and low education level families. Educational grants can be considered to allocate to families with difficulties paying their education expenses.
+2.  Low wages earned by Low education level residents; study grants can be set to encourage adult learners who would like to pursue continuity study.
+3.  Our Visulasation shows the findings which indicate wealth does not unequivocally increase happiness, however, it is turned another way round.
