@@ -1,0 +1,670 @@
+---
+title: "Take-home_Ex2"
+editor: visual
+author: "Han Shumin"
+date: "6 May 2023"
+date-modified: "`r Sys.Date()`"
+format:
+  html:
+    code-fold: true
+    code-summary: "Show the code"
+execute: 
+  echo: true
+  eval: true
+  warning: false
+---
+
+```{r}
+pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, tidyverse, lubridate, igraph, ggiraph, ggplot2, ggthemes, patchwork, plotly, hrbrthemes)
+```
+
+```{r}
+MC2 <- fromJSON("data/mc2_challenge_graph.json")
+```
+
+whatever source and target in edges, must be appeared in nodes
+
+```{r}
+MC2_nodes <- as_tibble(MC2$nodes) %>%
+  select(id, shpcountry, rcvcountry)
+
+
+
+MC2_edges <- as_tibble(MC2$links) %>%
+  mutate(Arrivaldate = ymd(arrivaldate)) %>%
+  mutate(year = year(Arrivaldate)) %>%
+  mutate(month = month(Arrivaldate)) %>%
+  select(source, target, Arrivaldate, year, month, hscode, valueofgoods_omu, volumeteu, weightkg, valueofgoodsusd) %>%
+  distinct()
+
+# MC2_edges_r <- MC2_edges %>%
+#   rename(source_label = source) %>%
+#   left_join(MC2_nodes, by = c("source_label" = "label")) %>%
+#   mutate(source = id) %>%
+#   select(-id)
+#   
+# MC2_edges_r <- MC2_edges_r %>%
+#   rename(target_label = target) %>%
+#   left_join(MC2_nodes, by = c("target_label" = "label")) %>%
+#   mutate(target = id) %>%
+#   select(-id, -shpcountry.x, -shpcountry.y, -rcvcountry.x, -rcvcountry.y)
+
+
+```
+
+```{r}
+#Check for missing values
+any(is.na(MC2_nodes))
+
+any(is.na(MC2_edges))
+```
+
+```{r}
+# Calculate the percentage of NA values in each column
+nodes_na_pct <- colMeans(is.na(MC2_nodes)) * 100
+
+# Print the NA percentages
+print(nodes_na_pct)
+
+# Calculate the percentage of NA values in each column
+edges_na_pct <- colMeans(is.na(MC2_edges)) * 100
+
+# Print the NA percentages
+print(edges_na_pct)
+```
+
+The valueofgoods_omu has 99% of na values, therefore we can remove it from the edges table
+
+```{r}
+#drop the valueofgoods_omu column, and remove rows with missing value in volumnteu column
+MC2_edges_clean <- MC2_edges[, -which(names(MC2_edges) == "valueofgoods_omu")]
+MC2_edges_clean <- MC2_edges_clean[!is.na(MC2_edges_clean$volumeteu), ]
+
+glimpse(MC2_edges_clean)
+
+MC2_nodes_clean <- dplyr::mutate(MC2_nodes, 
+                                shpcountry = ifelse(is.na(shpcountry), "others", shpcountry),
+                                rcvcountry = ifelse(is.na(rcvcountry), "others", rcvcountry))
+
+glimpse(MC2_nodes_clean)
+```
+
+### Load all Bundle files, distinct hscode, create a column fishtype
+
+```{r}
+# carp <- fromJSON("data/bundles/carp.json")
+# carp_hscode <- as_tibble(carp$links) %>%
+#   select(hscode) %>%
+#   distinct() %>%
+#   mutate(fishtype = 'carp')
+```
+
+```{r}
+# catfish <- fromJSON("data/bundles/catfish.json")
+# 
+# catfish_hscode <- as_tibble(catfish$links) %>%
+#   select(hscode) %>%
+#   distinct() %>%
+#   mutate(fishtype = 'catfish')
+```
+
+```{r}
+# chub_mackerel <- fromJSON("data/bundles/chub_mackerel.json")
+# 
+# chub_mackerel_hscode <- as_tibble(chub_mackerel$links) %>%
+#   select(hscode) %>%
+#   distinct() %>%
+#   mutate(fishtype = 'chub_mackerel')
+```
+
+```{r}
+# cod2 <- fromJSON("data/bundles/cod2.json")
+# 
+# cod2_hscode <- as_tibble(cod2$links) %>%
+#   select(hscode) %>%
+#   distinct() %>%
+#   mutate(fishtype = 'cod2')
+
+```
+
+```{r}
+# herring <- fromJSON("data/bundles/herring.json")
+# 
+# herring_hscode <- as_tibble(herring$links) %>%
+#   select(hscode) %>%
+#   distinct() %>%
+#   mutate(fishtype = 'herring')
+
+
+```
+
+```{r}
+# lichen <- fromJSON("data/bundles/lichen.json")
+# 
+# lichen_hscode <- as_tibble(lichen$links) %>%
+#   select(hscode) %>%
+#   distinct() %>%
+#   mutate(fishtype = 'lichen')
+
+```
+
+```{r}
+# mackerel <- fromJSON("data/bundles/mackerel.json")
+# 
+# mackerel_hscode <- as_tibble(mackerel$links) %>%
+#   select(hscode) %>%
+#   distinct() %>%
+#   mutate(fishtype = 'mackerel')
+
+```
+
+```{r}
+# pollock <- fromJSON("data/bundles/pollock.json")
+# 
+# pollock_hscode <- as_tibble(pollock$links) %>%
+#   select(hscode) %>%
+#   distinct() %>%
+#   mutate(fishtype = 'pollock')
+```
+
+```{r}
+# salmon <- fromJSON("data/bundles/salmon.json")
+# 
+# salmon_hscode <- as_tibble(salmon$links) %>%
+#   select(hscode) %>%
+#   distinct() %>%
+#   mutate(fishtype = "`salmon`")
+
+```
+
+```{r}
+# salmon_wgl <- fromJSON("data/bundles/salmon_wgl.json")
+# 
+# salmon_wgl_hscode <- as_tibble(salmon_wgl$links) %>%
+#   select(hscode) %>%
+#   distinct() %>%
+#   mutate(fishtype = "salmon_wgl")
+
+```
+
+```{r}
+# shark <- fromJSON("data/bundles/shark.json")
+# 
+# shark_hscode <- as_tibble(shark$links) %>%
+#   select(hscode) %>%
+#   distinct() %>%
+#   mutate(fishtype = "shark")
+
+
+```
+
+```{r}
+# tuna <- fromJSON("data/bundles/tuna.json")
+# 
+# tuna_hscode <- as_tibble(tuna$links) %>%
+#   select(hscode) %>%
+#   distinct() %>%
+#   mutate(fishtype = "tuna")
+
+
+```
+
+```{r}
+# bundle_hscode <- rbind(carp_hscode, catfish_hscode, chub_mackerel_hscode, cod2_hscode, herring_hscode, lichen_hscode, mackerel_hscode, pollock_hscode, salmon_hscode, salmon_wgl_hscode,
+#                        shark_hscode, tuna_hscode)  %>%
+#   distinct()
+```
+
+### Merge bundle file to main graph edges table by hscode
+
+```{r}
+# # Merge MC2_edges_clean with carp_hscode
+# MC2_edges_clean_merged <- merge(MC2_edges_clean, bundle_hscode, by = "hscode", all.x = TRUE)
+# 
+# 
+# MC2_edges_clean_merged <- dplyr::mutate(MC2_edges_clean_merged, 
+#                                 fishtype = ifelse(is.na(fishtype), "unknown", fishtype))
+
+
+```
+
+```{r}
+MC2_edges_clean_mapped <- MC2_edges_clean %>%
+  mutate(fishtype = case_when(
+    startsWith(hscode, "301") ~ "live fish",
+    startsWith(hscode, "302") ~ "fresh fish",
+    startsWith(hscode, "303") ~ "frozen fish",
+    startsWith(hscode, "304") ~ "fish meat",
+    startsWith(hscode, "305") ~ "processed fish",
+    startsWith(hscode, "306") ~ "crustaceans",  #like lobster or shrimps
+    startsWith(hscode, "307") ~ "molluscs",  #like Oysters or Abalone
+    startsWith(hscode, "308") ~ "aquatic invertebrates", #like Sea cucumbers
+    TRUE ~ "not fish"
+  ))
+
+# MC2_edges_clean_filtered <- MC2_edges_clean_mapped %>%
+#   filter(!is.na(fishtype))
+```
+
+
+
+
+```{r}
+grp1 <- MC2_edges_clean_mapped %>%
+  group_by(year, month, fishtype) %>%
+  summarise(no_shnpment = n()) %>%
+  filter(fishtype !="not fish") %>%
+  ungroup()
+#  filter(year %in% c(2032, 2033)) %>%
+#  top_n(round(0.2 * n()), wt = avg_weightkg)
+
+tt <- c(paste("Year:", grp1$year, "<br>Month:", grp1$month, "<br>fishtype:", grp1$fishtype, "<br>NoShipment:", grp1$no_shnpment))
+
+fig1 <- grp1 %>%
+  mutate(month = factor(month, levels = 1:12, labels = 1:12)) %>%
+  ggplot(aes(x = month, y = no_shnpment, fill = fishtype, text = tt)) +
+  geom_bar(position = "stack", stat = "identity") +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(title = "No of shipment per month, 2028 - 2034", x = 'Month', y = 'No of shipment') +
+  facet_wrap(~year, nrow=1) +
+  theme_ipsum() +
+  theme(legend.position = "none") +
+  xlab("") +
+  scale_x_discrete(labels = 1:12)
+
+fig1 <- ggplotly(fig1, tooltip = "text")
+
+fig1
+
+```
+
+### Distribution plot
+
+```{r}
+shipcountry <- MC2_nodes_clean %>%
+  plot_ly(x = ~shpcountry) %>%
+  add_histogram(color = I('#808de8')) %>%
+  layout(title = "Distribution of Countries that Company Associated with when Shipping",
+         yaxis = list(title = "No. of Companies Associated"),
+         xaxis = list(title = "Country"),
+         subtitle = "Vast Challenge 2023",
+         barmode = "overlay",
+         bargap = 0.1)
+
+revcountry <- MC2_nodes_clean %>%
+  plot_ly(x = ~rcvcountry) %>%
+  add_histogram(color = I('#6eba6a')) %>%
+  layout(title = "Distribution of Countries that Company Associated with when shipping & Receiving",
+         yaxis = list(title = "No. of Companies Associated"),
+         xaxis = list(title = "Country"),
+         subtitle = "Vast Challenge 2023",
+         barmode = "overlay",
+         bargap = 0.1)
+
+subplot(shipcountry, revcountry, nrows = 1, titleX = FALSE) %>%
+  layout(plot.title = list(size = 14, font = list(face = "bold")))
+```
+
+```{r}
+glimpse(MC2_edges_clean_mapped)
+```
+
+### Num shipment by fish type per year
+
+```{r}
+grp2 <- MC2_edges_clean_mapped %>%
+  group_by(year, month, fishtype) %>%
+  summarise(no_shnpment = n()) %>%
+  filter(fishtype!="not fish") %>%
+  ungroup()
+
+tt <- c(paste("Year:", grp2$year, "<br>Num of shnp:", grp2$no_shnpment, "<br>fishtype:", grp2$fishtype))
+
+fig2 <- grp2 %>%
+  ggplot(aes(x = month, y = no_shnpment, colour = fishtype)) +
+  geom_smooth(aes(group = fishtype), alpha = 0.1, se = FALSE) +
+  geom_point_interactive(aes(tooltip = tt), size = 4) +
+  theme_excel_new() +
+  scale_x_continuous(breaks = seq(1, 12, by = 1), limits = c(1, 12)) +
+  scale_y_continuous(breaks = seq(0, 6500, by = 1000), limits = c(0, 6500)) +
+  labs(title = "Total shipment per month by fish type, 2028 - 2034", x = 'Month', y = 'Num of Shnp') +
+  facet_wrap(~year, nrow = 1) +
+  guides(color = FALSE)
+
+girafe(ggobj = fig2, width_svg = 12)
+```
+
+```{r}
+# grp2 <- MC2_edges_clean_mapped %>%
+#   group_by(year, month, fishtype) %>%
+#   summarise(no_shnpment = n()) %>%
+#   filter(fishtype!="not fish") %>%
+#   ungroup()
+# 
+# tt1 <- c(paste("Year:", grp2$year, "<br>Num of shnp:", grp2$no_shnpment, "<br>fishtype:", grp2$fishtype))
+# 
+# fig2 <- grp2 %>%
+#   plot_ly(x = ~month, y = ~no_shnpment, color = ~fishtype, colors = "viridis",
+#           type = "scatter", mode = "markers", hovertext = ~tt1) %>%
+#   add_lines(x = ~month, y = ~no_shnpment, color = ~fishtype, colors = "viridis",
+#             line = list(shape = "spline", smoothing = 0.2)) %>%
+#   layout(title = "Total shipment per month by fish type, 2028 - 2034",
+#          xaxis = list(title = "Year"),
+#          yaxis = list(title = "Num of Shnp"),
+#          legend = list(orientation = "h")) %>%
+#   subplot(nrows = 1, shareX = TRUE) 
+# 
+# fig2
+
+
+grp2 <- MC2_edges_clean_mapped %>%
+  group_by(year, month, fishtype) %>%
+  summarise(no_shnpment = n()) %>%
+  filter(fishtype!="not fish") %>%
+  ungroup()
+
+# using ggplot2 for creating the plot with facet_wrap
+p <- ggplot(grp2, aes(x = month, y = no_shnpment, color = fishtype)) +
+  geom_line(aes(group = fishtype), line = list(shape = "spline", smoothing = 0.2)) +
+  geom_point() +
+  labs(title = "Total shipment per month by fish type, 2028 - 2034", 
+       x = "Month", 
+       y = "Num of Shnp") +
+  facet_wrap(~year, nrow = 1) + 
+  theme(legend.position = "bottom")
+
+# converting ggplot2 object to plotly object
+fig2 <- ggplotly(p)
+
+# print the plot
+fig2
+```
+
+
+
+
+```{r}
+MC2_edges_aggregated <- MC2_edges_clean_mapped %>%
+  # filter(year %in% c(2032)) %>%
+  filter(fishtype %in% c("frozen fish", "fresh fish")) %>%
+  group_by(source, target, fishtype, year) %>%
+  summarise(Weight = n()) %>%
+  filter(source != target) %>%
+  filter(Weight > 20) %>%
+  ungroup()
+  
+```
+
+```{r}
+# Filter rows in nodes based on matching ids in edges target and source
+
+id1 <- MC2_edges_aggregated %>%
+  select(source) %>%
+  rename(id = source)
+id2 <- MC2_edges_aggregated %>%
+  select(target) %>%
+  rename(id = target)
+
+MC2_nodes_extracted <- rbind(id1, id2)  %>%
+  distinct()
+
+# # Let's add a column with the group of each name. It will be useful later to color points
+# MC2_nodes_extracted$group  <-  MC2_edges_aggregated$source[match(MC2_nodes_extracted$id, MC2_edges_aggregated$target)]
+
+MC2_nodes_extracted <- MC2_nodes_extracted %>%
+  left_join(MC2_edges_aggregated %>% select(target, fishtype), by = c("id" = "target")) %>%
+  select(id, fishtype)
+
+# Let's add a column with the group of each name. It will be useful later to color points
+MC2_nodes_extracted$group <- MC2_nodes_extracted$fishtype
+
+```
+
+```{r}
+MC2_graph <- tbl_graph(nodes = MC2_nodes_extracted,
+                        edges = MC2_edges_aggregated, 
+                        directed = TRUE) 
+
+
+MC2_graph  
+```
+
+```{r}
+# set.seed (1234)
+# g <- MC2_graph %>%
+#   mutate(community = as.factor(group_edge_betweenness(weights = Weight))) %>%
+#   ggraph(layout = "fr") + 
+#   geom_edge_link(aes(width=Weight), 
+#                  alpha=0.2) +
+#   scale_edge_width(range = c(0.1, 5)) +
+#   geom_node_point(aes(colour = community), show.legend = FALSE) 
+# 
+# g+theme_graph()
+
+set.seed(1234)
+g <- MC2_graph %>%
+  mutate(community = as.factor(group_edge_betweenness(weights = Weight))) %>%
+  ggraph(layout = "fr") +
+  geom_edge_link(aes(width = Weight), alpha = 0.2) +
+  scale_edge_width(range = c(0.1, 5)) +
+  geom_node_point(aes(colour = community, shape = group), show.legend = FALSE) +
+  scale_shape_manual(values = c("frozen fish" = 16))  # Assign different shapes based on fishtype
+
+g + theme_graph()
+```
+
+```{r}
+quantile_graph <- quantile(eigen_centrality(MC2_graph)$vector,
+         probs = seq(0, 1, 1/10)
+         )
+V(MC2_graph)$size = eigen_centrality(MC2_graph)$vector
+
+MC2_graph_aggregated <- delete_vertices(MC2_graph, V(MC2_graph)[size < quantile_graph[10]])
+
+
+set.seed (1234)
+layout1 <- layout_with_fr(MC2_graph_aggregated)
+
+quantile_graph_aggregated <- quantile(V(MC2_graph_aggregated)$size, #identify top 10% of the new vertices
+         probs = seq(0, 1, 1/10)
+         )
+
+
+V(MC2_graph_aggregated)$color <- ifelse (V(MC2_graph_aggregated)$size > quantile_graph_aggregated[10], "darkgoldenrod3", "azure3") #color yellow if vertices is top 10%
+E(MC2_graph_aggregated)$color <- "grey"
+V(MC2_graph_aggregated)$size <- V(MC2_graph_aggregated)$size/0.065 
+#Increase the size of nodes based on their centrality score, only those with high score will be visible
+
+V(MC2_graph_aggregated)$id <- ifelse (V(MC2_graph_aggregated)$size*0.065 > quantile_graph_aggregated[10],V(MC2_graph_aggregated)$id,NA)
+#label the vertices if vertices belongs to the top 10%
+
+
+plot(MC2_graph_aggregated, edge.arrow.size = 0.25, edge.arrow.mode = "-", 
+     vertex.label = V(MC2_graph_aggregated)$id, vertex.label.cex = 0.65, 
+     vertex.label.font = 1, main = "Which company has most links to other nodes?")
+
+```
+
+However, a higher number of links could potentially indicate a higher level of activity, collaborations, or partnerships, which might increase the likelihood of a company undergoing name changes.
+
+```{r}
+set.seed (1234)
+GNC <- cluster_edge_betweenness(MC2_graph_aggregated, weights = NULL)
+V(MC2_graph_aggregated)$color <-membership(GNC)              #Plot setting specifying the coloring of vertices by community
+MC2_graph_aggregated$palette <- diverging_pal(length(GNC)) 
+plot(MC2_graph_aggregated, edge.arrow.size=0.25,edge.arrow.mode = "-", vertex.label = V(MC2_graph_aggregated)$id, vertex.label.cex = 0.65, vertex.label.font = 1, main = "How many clusters within the same type of fishing?")
+
+```
+
+```{r}
+V(MC2_graph)$degree <- degree(MC2_graph, mode = "in")
+ggraph(MC2_graph, layout = 'linear', circular = TRUE) +
+  geom_edge_arc(aes(colour = factor(year))) +
+  geom_node_point(aes(alpha = degree, color = MC2_nodes_extracted$group), show.legend = FALSE) +
+  coord_fixed() +
+    theme(legend.key.size = unit(2, "lines"),
+        legend.position = "right",
+        legend.box = "vertical")
+
+```
+
+```{r}
+V(MC2_graph)$degree <- degree(MC2_graph, mode = "in")
+
+MC2_nodes_extracted$betweenness_centrality <- betweenness(MC2_graph)
+
+ggraph(MC2_graph, layout = 'linear', circular = TRUE) +
+  geom_edge_arc(aes(colour = factor(year))) +
+  geom_node_point(aes(alpha = degree, size = MC2_nodes_extracted$betweenness_centrality, color = MC2_nodes_extracted$group), show.legend = FALSE) +
+  geom_node_text(aes(label = id), vjust = -0.5, size = 1) +
+  coord_fixed() +
+  theme(legend.key.size = unit(2, "lines"),
+        legend.position = "right",
+        legend.box = "vertical")
+```
+
+```{r}
+write_rds(MC2_nodes_extracted, "data/MC2_nodes_extracted.rds")
+write_rds(MC2_edges_aggregated, "data/MC2_edges_aggregated.rds")
+write_rds(MC2_graph, "data/MC2_graph.rds")
+
+```
+
+```{r}
+# write_csv(MC2_nodes_extracted, "data/MC2_nodes_extracted.csv")
+# write_csv(MC2_edges_aggregated, "data/MC2_edges_aggregated.csv")
+```
+
+```{r}
+edges_df <- MC2_graph %>%
+  activate(edges) %>%
+  as.tibble()
+
+nodes_df <- MC2_graph %>%
+  activate(nodes) %>%
+  as.tibble() %>%
+  rename(label = id) %>%
+  mutate(id=row_number()) %>%
+  select(id, label)
+
+# Let's add a column with the group of each name. It will be useful later to color points
+nodes_df$group <- edges_df$from[match(nodes_df$id, edges_df$to)]
+
+# MC2_edges_aggregated_1 <- MC2_edges_clean_merged %>%
+#   left_join(MC2_nodes_clean, by = c("source_label" = "label")) %>%
+#   rename(from = source) %>%
+#   left_join(MC2_nodes_clean, by = c("target_label" = "label")) %>%
+#   rename(to = target) %>%
+#   filter(year %in% c(2023)) %>%
+#   filter(fishtype == "mackerel") %>%
+#   group_by(from, to, fishtype, year) %>%
+#     summarise(weight = n()) %>%
+#   filter(from!=to) %>%
+#   filter(weight>20) %>%
+#   ungroup()
+#   
+# 
+# MC2_nodes_clean <- MC2_nodes_clean %>%
+#   rename(group = shpcountry)
+```
+
+```{r}
+visNetwork(nodes_df,
+           edges_df) %>%
+  visIgraphLayout(layout = "layout_with_fr",
+                  smooth = FALSE,
+                  physics = FALSE) %>%
+  visEdges(arrows = "to",
+           smooth = list(enabled = TRUE,
+                         type = "curvedCW"), 
+           color = list(highlight = "lightgray")) %>%
+  visOptions(highlightNearest = list(enabled = TRUE,
+                                     degree = 1,
+                                     hover = TRUE,
+                                     labelOnly = TRUE),
+             nodesIdSelection = TRUE,
+             selectedBy = "group") %>%
+  visLayout(randomSeed = 123)
+
+
+
+
+
+# visNetwork(MC2_nodes_clean,
+#            MC2_edges_aggregated) %>%
+#   visIgraphLayout(layout = "layout_with_fr",
+#                   smooth = FALSE,
+#                   physics = FALSE) %>%
+#   visEdges(arrows = "to",
+#            smooth = list(enabled = TRUE,
+#                          type = "curvedCW"), 
+#            color = list(highlight = "lightgray")) %>%
+#   visNodes(label = MC2_nodes_clean$id) %>%
+#   visOptions(selectedBy = "group",
+#              highlightNearest = list(enabled = TRUE,
+#                                      degree = 1,
+#                                      hover = TRUE,
+#                                      labelOnly = TRUE),
+#              nodesIdSelection = TRUE) %>%
+#   visLayout(randomSeed = 123)
+```
+
+```{r}
+edges_df1 <- MC2_graph %>%
+  activate(edges) %>%
+  as.tibble()
+
+nodes_df1 <- MC2_graph %>%
+  activate(nodes) %>%
+  as.tibble() %>%
+  rename(label = id) %>%
+  mutate(id=row_number()) %>%
+  select(id, label)
+
+# Perform community detection using the group edge betweenness algorithm
+communities <- cluster_edge_betweenness(MC2_graph)
+
+# Get the cluster membership of each node
+membership <- membership(communities)
+
+# Add the cluster membership information to the nodes data frame
+nodes_df1$group <- membership
+
+# Plot the graph with clustered nodes using visNetwork
+visNetwork(nodes_df1, edges_df1) %>%
+  visIgraphLayout(layout = "layout_with_fr") %>%
+  visEdges(arrows = "to",
+           smooth = list(enabled = TRUE,
+                         type = "curvedCW"), 
+           color = list(highlight = "lightgray")) %>%
+  visOptions(highlightNearest = list(enabled = TRUE,
+                                     degree = 1,
+                                     hover = TRUE,
+                                     labelOnly = TRUE),
+             nodesIdSelection = TRUE,
+             selectedBy = "group") %>%
+  visLayout(randomSeed = 123)
+```
+
+```{r}
+# Let's add a column with the group of each name. It will be useful later to color points
+# MC2_nodes_extracted$group <- MC2_edges_aggregated$source[match(MC2_nodes_extracted$id, MC2_edges_aggregated$target)]
+
+MC2_graph_2 <- tbl_graph(nodes = MC2_nodes_extracted,
+                        edges = MC2_edges_aggregated, 
+                        directed = TRUE) 
+
+
+
+g <- MC2_graph_2 %>%
+  mutate(betweenness_centrality = centrality_betweenness()) %>%
+  mutate(community = as.factor(group_edge_betweenness(weights = Weight, directed = TRUE))) %>%
+  ggraph(layout = "fr") + 
+  geom_edge_link(aes(width = Weight), alpha = 0.2) +
+  scale_edge_width(range = c(0.1, 5)) +
+  geom_node_point(aes(color = community, size = betweenness_centrality), show.legend = FALSE) +
+  geom_node_text(aes(label = ifelse(betweenness_centrality > quantile(betweenness_centrality, 0.9), id, "")), 
+                 repel = TRUE, size = 3, max.overlaps = 30)
+
+g + theme_graph()
+```

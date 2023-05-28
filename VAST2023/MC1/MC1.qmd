@@ -28,6 +28,6 @@ MC1_nodes <- as_tibble(MC1$nodes) %>%
 ```
 
 ```{r}
-MC_edges <- as_tibble(MC1$links) %>%
+MC1_edges <- as_tibble(MC1$links) %>%
   select(source, target, type, weight, key)
 ```

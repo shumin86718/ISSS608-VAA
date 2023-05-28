@@ -13,6 +13,7 @@ execute:
   eval: true
   warning: false
 ---
+
 ### Installing and launching R packages
 
 ```{r}
@@ -37,6 +38,7 @@ glimpse(GAStech_edges)
 ### Building Interactive Network Graph with visNetwork
 
 #### Data preparation
+
 ```{r}
 GAStech_edges_aggregated <- GAStech_edges %>%
   left_join(GAStech_nodes, by = c("sourceLabel" = "label")) %>%
@@ -52,6 +54,7 @@ GAStech_edges_aggregated <- GAStech_edges %>%
 ```
 
 #### Plotting the first interactive network graph
+
 ```{r}
 visNetwork(GAStech_nodes, 
            GAStech_edges_aggregated)
