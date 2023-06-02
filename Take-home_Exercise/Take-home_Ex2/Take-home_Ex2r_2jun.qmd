@@ -2,7 +2,7 @@
 title: "Take-home_Ex2"
 editor: visual
 author: "Han Shumin"
-date: "19 May 2023"
+date: "6 May 2023"
 date-modified: "`r Sys.Date()`"
 format:
   html:
@@ -24,15 +24,13 @@ With reference to Mini-Challenge 2 of VAST Challenge 2023 and by using appropria
 
 ## Methodology
 
-To analyse the temporal patterns, timeline visualization and network visualization will be used to identify the patterns and explore the possible the business relationship between entities.
+To analyse the temporal patterns, timeline visualization and network visualization will be using to identify the patterns and explore the possible the business relationship between entities.
 
-**Visualizing Temporal Patterns:**
+Visualizing Temporal Patterns:
 
 Timeline Visualization: Create a timeline visualization that shows the activities of companies over time. Each company can be represented as a separate entity on the timeline, and their fishing activities (both legal and illegal) can be displayed as events or bars. This allows analysts to compare the temporal patterns of different companies and identify any suspicious behavior or recurring patterns.
 
-**Temporal Network Visualization:**
-
-Represent the relationships between companies and their fishing activities as a network, where nodes represent companies and edges indicate their fishing activities. By incorporating temporal information into the visualization, such as color-coding or varying the thickness of edges based on the time of occurrence or numbers of interactions between nodes, analysts can identify patterns of illegal fishing and observe if companies reappear under different names.
+Temporal Network Visualization: Represent the relationships between companies and their fishing activities as a network, where nodes represent companies and edges indicate their fishing activities. By incorporating temporal information into the visualization, such as color-coding or varying the thickness of edges based on the time of occurrence or numbers of interactions between nodes, analysts can identify patterns of illegal fishing and observe if companies reappear under different names.
 
 # Data Preparation
 
@@ -40,13 +38,14 @@ Represent the relationships between companies and their fishing activities as a 
 
 The following code chunks will install and load the required packages.
 
+
 ```{r}
 pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, tidyverse, lubridate, igraph, ggiraph, ggplot2, ggthemes, patchwork, plotly, ggstatsplot, hrbrthemes)
 ```
 
 ## Load the dataset in JSON format
 
-In the code chunk below, from `JSON()` of jsonlite package is used to import `mc2_challenge_graph.json` into R environment.
+In the code chunk below, fromJSON() of jsonlite package is used to import mc2_challenge_graph.json into R environment.
 
 ```{r}
 MC2 <- fromJSON("data/mc2_challenge_graph.json")
@@ -56,7 +55,7 @@ MC2 <- fromJSON("data/mc2_challenge_graph.json")
 
 ### Extracting the nodes and links
 
-The code chunk is used to extract nodes/edges data tables from MC2 list object and save the output in a tibble data frame object called `MC2_nodes` and `MC2_edges`.
+The code chunk is used to extract nodes/edges data tables from MC2 list object and save the output in a tibble data frame object called MC2_nodes and MC2_edges.
 
 ```{r}
 MC2_nodes <- as_tibble(MC2$nodes) %>%
@@ -104,7 +103,7 @@ edges_na_pct <- colMeans(is.na(MC2_edges)) * 100
 print(edges_na_pct)
 ```
 
-The `valueofgoods_omu` has 99% of na values, therefore we can remove this variable from the edges table. In the nodes table, we have 64.6% and 8.4\$ na values in shipping country and receiving country columns, we can replace the missing country names with "others".
+The valueofgoods_omu has 99% of na values, therefore we can remove this variable from the edges table. In the nodes table, we have 64.6% and 8.4\$ na values in shipping country and receiving country columns, we can replace the missing country names with "others".
 
 ```{r}
 #drop the valueofgoods_omu column, and remove rows with missing value in volumnteu column
@@ -112,7 +111,6 @@ MC2_edges_clean <- MC2_edges[, -which(names(MC2_edges) == "valueofgoods_omu")]
 
 glimpse(MC2_edges_clean)
 
-# replace na with others in shipping country and receive country
 MC2_nodes_clean <- dplyr::mutate(MC2_nodes, 
                                 shpcountry = ifelse(is.na(shpcountry), "others", shpcountry),
                                 rcvcountry = ifelse(is.na(rcvcountry), "others", rcvcountry))
@@ -122,9 +120,9 @@ glimpse(MC2_nodes_clean)
 
 ### HSCODE Mapping
 
-From the VAST MC2 datanotes we know that Harmonized System code for the shipment can be joined with the **hscodes** table to get additional details.
+From the VAST MC2 datanotes we know that Harmonized System code for the shipment can be joined with the hscodes table to get additional details.
 
-The **hscode** table used in this exercise was extracted from the World Customs Organization website.
+The hscode table used in this exercise was extracted from the World Customs Organization website.
 
 ![](/Take-home_Exercise/Take-home_Ex2/images/WCO%20hscode.jpg){width="579"}
 
@@ -162,19 +160,17 @@ source_nodes_g <- source_nodes_g %>%
   mutate(fishtype = factor(fishtype, levels = fishtype))
 
 source_nodes_g <- source_nodes_g %>%
-  plot_ly(x = ~reorder(fishtype, n), # Reorder the x-axis categories based on count
-          y = ~n, 
-          type = "bar", 
-          color = I('#808de8'), 
-          text = ~n, 
-          textposition = "auto", 
-          hoverinfo = "text", # Set hover information to display text
-          texttemplate = "%{y}"
-          ) %>%
+  plot_ly(x = ~reorder(fishtype, n), y = ~n, type = "bar", color = I('#808de8'), 
+          text = ~n, textposition = "auto", hoverinfo = "text", 
+          texttemplate = "%{y}") %>%
   layout(
     title = list(text = "Distribution of source nodes by fishtype", x = 0.5),
+    annotations = list(
+      text = "Vast Challenge 2023",
+      x = 0.5, y = 1.05, xref = "paper", yref = "paper", showarrow = FALSE
+    ),
     yaxis = list(title = "No. of Companies"),
-    xaxis = list(title = "fishtype", tickangle = -90),   # Set x-axis title and tick angle
+    xaxis = list(title = "fishtype", tickangle = -90),
     showlegend = FALSE
   )
 
@@ -184,7 +180,8 @@ source_nodes_g
 
 Upon evaluating the node distribution plot delineated by product type, it becomes clear that entities not related to the fish or seafood industries account for the majority of the data. Followed by 'fish meat', 'crustaceans', and 'frozen fish' in decreasing order.
 
-Given our task is to analyze patterns among fishing companies, it would be prudent to narrow down our data set and filter out irrelevant noise. In this context, companies identified as 'not fish' that do not engage in fish or seafood related operations may skew the analysis and should be removed.
+Given our task is to analyze patterns among fishing companies, it would be prudent to narrow down our data set and filter out irrelevant noise. In this context, companies identified as 'not fish' that do not engage in fish or seafood related operations may skew the analysis and hence, should be removed. 
+
 
 ### Timeline Visualization
 
@@ -216,13 +213,13 @@ subplot
 
 ```
 
+
 We examined above plot of the monthly shipment count, organized by fish type (excluding non-fish products), revealed distinct temporal patterns. Notably a dip in shipments was observed in April, followed by a gradually raising trend to a peak in October. This is then succeeded stable trend in November and December, suggesting a stabilization of activity during these months.
 
-Such patterns could be attributed to the majority of fisheries operating in accordance with seasonal cycles, which affect the timing and intensity of their fishing activities. Consequently, our subsequent analyses will refine the focus to those months demonstrating higher fishing activities.
+Such patterns could be attributed to the majority of fisheries operating in accordance with seasonal cycles, which affect the timing and intensity of their fishing activities. Consequently, our subsequent analyses will refine the focus to those months demonstrating higher fishing activities. 
 
-### Time series Analysis
 
-#### Shipment By Product Type 
+### Num shipment by fish type per year
 
 ```{r}
 grp2 <- MC2_edges_clean_mapped %>%
@@ -249,9 +246,12 @@ fig2 <- ggplotly(p)
 fig2
 ```
 
-Utilizing data specific to fish and seafood-related shipments, we created a time series plot to study the temporal trends. We can observe the number of shipments reached a significant peak in the year 2033. This spike was particularly seen in the months of July, August, and September for the top four fish products: 'fish meat', 'crustaceans', 'frozen fish', and 'molluscs'.
 
-This observation could be leveraged in our subsequent network graph analysis. By reducing the node count to concentrate on shipments pertaining to these top four fish products during these specific months in 2033, we could streamline our analysis.
+Utilizing data specific to fish and seafood-related shipments, we created a time series plot to study the temporal trends. We can observed the number of shipments reached a significant peak in the year 2033. This spike was particularly seen in the months of July, August, and September for the top four fish products: 'fish meat', 'crustaceans', 'frozen fish', and 'molluscs'.
+
+This observation could be leveraged in our subsequent network graph analysis. By reducing the node count to concentrate on shipments pertaining to these top four fish products during these specific months in 2033, we could streamline our analysis. 
+
+
 
 ### Prepare for Edges
 
@@ -293,7 +293,7 @@ MC2_nodes_extracted$group <- MC2_nodes_extracted$fishtype
 
 ```
 
-### Creating the Graph Dataframe
+### Creating the graph dataframe
 
 ```{r}
 MC2_graph <- tbl_graph(nodes = MC2_nodes_extracted,
@@ -306,66 +306,161 @@ MC2_graph
 
 ### Plot Network Graph
 
-Degree centrality only takes into account the number of edges for each node, but it leaves out information about ego's alters.
+```{r}
+set.seed (1234)
+g <- MC2_graph %>%
+  mutate(community = as.factor(group_edge_betweenness(weights = Weight))) %>%
+  ggraph(layout = "fr") +
+  geom_edge_link(aes(width=Weight),
+                 alpha=0.2) +
+  scale_edge_width(range = c(0.1, 5)) +
+  geom_node_point(aes(colour = community), show.legend = FALSE)
 
-However, we might think that power comes from being tied to powerful people. If A and B have the same degree centrality, but A is tied to all high degree people and B is tied to all low degree people, then intuitively we want to see A with a higher score than B.
+g+theme_graph()
 
-Eigenvector centrality takes into account alters' power. In our Network graph, Eigenvector score for each node will be calculated using `igraph` package.
+# set.seed(1234)
+# g <- MC2_graph %>%
+#   mutate(betweenness_centrality = centrality_betweenness()) %>%
+#   mutate(community = as.factor(group_edge_betweenness(weights = Weight))) %>%
+#   ggraph(layout = "fr") +
+#   geom_edge_link(aes(width = Weight), alpha = 0.2) +
+#   scale_edge_width(range = c(0.1, 5)) +
+#   geom_node_point(aes(colour = community), show.legend = FALSE) +
+#   geom_node_text(aes(label = ifelse(betweenness_centrality > quantile(betweenness_centrality, 0.9), id, "")),
+#                  repel = TRUE, size = 2, max.overlaps = 30)
+# 
+# g + theme_graph()
+```
 
-Due to the large number of edges within the interaction, we will focus only the top 20% nodes based on their eigenvector centrality score.
 
-::: callout-note
-Note: This part of codes cites from Senior Mr Jordan Ong's Take-Home_Exercise 6 in 2021-2022 April Term).
-:::
 
-::: panel-tabset
-## Eigen centrality
+
+
 
 ```{r}
 quantile_graph <- quantile(eigen_centrality(MC2_graph)$vector,
-         probs = seq(0, 1, 1/5)
+         probs = seq(0, 1, 1/10)
          )
 V(MC2_graph)$size = eigen_centrality(MC2_graph)$vector
 
-MC2_graph_aggregated <- delete_vertices(MC2_graph, V(MC2_graph)[size < quantile_graph[5]])
+MC2_graph_aggregated <- delete_vertices(MC2_graph, V(MC2_graph)[size < quantile_graph[10]])
 
 
 set.seed (1234)
 layout1 <- layout_with_fr(MC2_graph_aggregated)
 
-quantile_graph_aggregated <- quantile(V(MC2_graph_aggregated)$size, #identify top 20% of the new vertices
-         probs = seq(0, 1, 1/5)
+quantile_graph_aggregated <- quantile(V(MC2_graph_aggregated)$size, #identify top 10% of the new vertices
+         probs = seq(0, 1, 1/10)
          )
 
 
-V(MC2_graph_aggregated)$color <- ifelse (V(MC2_graph_aggregated)$size > quantile_graph_aggregated[5], "darkgoldenrod3", "azure3") #color yellow if vertices is top 20%
+V(MC2_graph_aggregated)$color <- ifelse (V(MC2_graph_aggregated)$size > quantile_graph_aggregated[10], "darkgoldenrod3", "azure3") #color yellow if vertices is top 10%
 E(MC2_graph_aggregated)$color <- "grey"
 V(MC2_graph_aggregated)$size <- V(MC2_graph_aggregated)$size/0.065 
 #Increase the size of nodes based on their centrality score, only those with high score will be visible
 
-V(MC2_graph_aggregated)$id <- ifelse (V(MC2_graph_aggregated)$size*0.065 > quantile_graph_aggregated[5],V(MC2_graph_aggregated)$id,NA)
-#label the vertices if vertices belongs to the top 20%
+V(MC2_graph_aggregated)$id <- ifelse (V(MC2_graph_aggregated)$size*0.065 > quantile_graph_aggregated[10],V(MC2_graph_aggregated)$id,NA)
+#label the vertices if vertices belongs to the top 10%
 
 
 plot(MC2_graph_aggregated, edge.arrow.size = 0.25, edge.arrow.mode = "-", 
      vertex.label = V(MC2_graph_aggregated)$id, vertex.label.cex = 0.65, 
-     vertex.label.font = 1, main = "Which companies are having  to other nodes?")
+     vertex.label.font = 1, main = "Which company has most links to other nodes?")
 
 ```
 
-A higher number of links could potentially indicate a higher level of activity, collaborations, or partnerships, which might increase the likelihood of a company undergoing name changes.
-
-## Nodes Attributes
+However, a higher number of links could potentially indicate a higher level of activity, collaborations, or partnerships, which might increase the likelihood of a company undergoing name changes.
 
 ```{r}
-vertex_attr(MC2_graph_aggregated, index = V(MC2_graph_aggregated)$size*0.065 > quantile_graph_aggregated[5]) 
+set.seed (1234)
+GNC <- cluster_edge_betweenness(MC2_graph_aggregated, weights = NULL)
+V(MC2_graph_aggregated)$color <-membership(GNC)              #Plot setting specifying the coloring of vertices by community
+MC2_graph_aggregated$palette <- diverging_pal(length(GNC)) 
+plot(MC2_graph_aggregated, edge.arrow.size=0.25,edge.arrow.mode = "-", vertex.label = V(MC2_graph_aggregated)$id, vertex.label.cex = 0.65, vertex.label.font = 1, main = "How many clusters within the same community?")
+
 ```
 
-Through the nodes attributes of the top 20% of Eigenvector Centrality Score, we see that majority of nodes are having the same product type which is crustaceans. We will now analyse to see if the product type affect the Eigen betweenness score. A non-parametric test is conducted to provided statistical evidence whether to reject or accept the null hypothesis.
 
-## Statistical Plot
 
-Hypothesis testing: Does types of fishing affect eigen betweenness score?
+
+
+
+### VisNetwork Graph
+
+```{r}
+edges_df <- MC2_graph %>%
+  activate(edges) %>%
+  as.tibble()
+
+nodes_df <- MC2_graph %>%
+  activate(nodes) %>%
+  as.tibble() %>%
+  rename(label = id) %>%
+  mutate(id=row_number()) %>%
+  select(id, label)
+
+# Let's add a column with the group of each name. It will be useful later to color points
+nodes_df$group <- edges_df$from[match(nodes_df$id, edges_df$to)]
+
+visNetwork(nodes_df,
+           edges_df) %>%
+  visIgraphLayout(layout = "layout_with_fr",
+                  smooth = FALSE,
+                  physics = FALSE) %>%
+  visEdges(arrows = "to",
+           smooth = list(enabled = TRUE,
+                         type = "curvedCW"), 
+           color = list(highlight = "lightgray")) %>%
+  visOptions(highlightNearest = list(enabled = TRUE,
+                                     degree = 1,
+                                     hover = TRUE,
+                                     labelOnly = TRUE),
+             nodesIdSelection = TRUE,
+             selectedBy = "group") %>%
+  visLayout(randomSeed = 1234)
+```
+
+
+```{r}
+edges_df1 <- MC2_graph %>%
+  activate(edges) %>%
+  as.tibble()
+
+nodes_df1 <- MC2_graph %>%
+  activate(nodes) %>%
+  as.tibble() %>%
+  rename(label = id) %>%
+  mutate(id=row_number()) %>%
+  select(id, label)
+
+# Perform community detection using the group edge cluster betweenness algorithm
+communities <- cluster_edge_betweenness(MC2_graph)
+
+# Get the cluster membership of each node
+membership <- membership(communities)
+
+# Add the cluster membership information to the nodes data frame
+nodes_df1$group <- membership
+
+# Plot the graph with clustered nodes using visNetwork
+visNetwork(nodes_df1, edges_df1) %>%
+  visIgraphLayout(layout = "layout_with_fr") %>%
+  visEdges(arrows = "to",
+           smooth = list(enabled = TRUE,
+                         type = "curvedCW"), 
+           color = list(highlight = "lightgray")) %>%
+  visOptions(highlightNearest = list(enabled = TRUE,
+                                     degree = 1,
+                                     hover = TRUE,
+                                     labelOnly = TRUE),
+             nodesIdSelection = TRUE,
+             selectedBy = "group") %>%
+  visLayout(randomSeed = 123)
+```
+
+
+
+### Hypothesis testing: Does types of fishing affect eigen betweenness score?
 
 ```{r}
 MC2_edges_aggregated_r <- MC2_edges_clean_mapped %>%
@@ -374,7 +469,7 @@ MC2_edges_aggregated_r <- MC2_edges_clean_mapped %>%
   group_by(source, target, fishtype, year) %>%
   summarise(Weight = n()) %>%
   filter(source != target) %>%
-  filter(Weight > 1) %>%
+  filter(Weight > 20) %>%
   ungroup()
 
 # Filter rows in nodes based on matching ids in edges target and source
@@ -428,107 +523,3 @@ p1 <- ggbetweenstats(
 
 p1
 ```
-:::
-
-From the statistical plot we have P-values is less than 0.05, it indicates that there is a statistically significant difference in the eigen betweenness scores across different fishing types.
-
-Therefore, we can conclude that the fishing type has a significant effect on the eigen betweenness scores in the network. This finding implies that the type of fishing has an influence on the structural importance or centrality of the nodes in the network, as measured by eigen betweenness.
-
-### VisNetwork Graph
-
-#### Community Detection
-
-::: panel-tabset
-## cluster_edge_betweenness
-
-The community detection is performed using the **`cluster_edge_betweenness`** function from the **`igraph`** package. This function calculates the edge betweenness centrality for each edge in the graph and then uses it to detect communities.
-
-```{r}
-edges_df1 <- MC2_graph %>%
-  activate(edges) %>%
-  as.tibble()
-
-nodes_df1 <- MC2_graph %>%
-  activate(nodes) %>%
-  as.tibble() %>%
-  rename(label = id) %>%
-  mutate(id=row_number()) %>%
-  select(id, label)
-
-# Perform community detection using the cluster edge betweenness
-communities <- cluster_edge_betweenness(MC2_graph)
-
-# Get the cluster membership of each node
-membership <- membership(communities)
-
-# Add the cluster membership information to the nodes data frame
-nodes_df1$group <- membership
-
-# Plot the graph with clustered nodes using visNetwork
-visNetwork(nodes_df1, edges_df1) %>%
-  visIgraphLayout(layout = "layout_with_fr") %>%
-  visEdges(arrows = "to",
-           smooth = list(enabled = TRUE,
-                         type = "curvedCW"), 
-           color = list(highlight = "lightgray")) %>%
-  visOptions(highlightNearest = list(enabled = TRUE,
-                                     degree = 1,
-                                     hover = TRUE,
-                                     labelOnly = TRUE),
-             nodesIdSelection = TRUE,
-             selectedBy = "group") %>%
-  visLayout(randomSeed = 1234)
-```
-
-**cluster_edge_betweenness**
-
--   the large number of nodes forming a single largest community suggests that the graph has strong connections and relatively low edge betweenness centrality across its edges.
-
--   This indicates a cohesive and densely connected network where most nodes are closely linked, resulting in a single dominant community.
-
-## Cluster louvain
-
-`cluster_louvain` is a community detection algorithm implemented in the igraph package in R. It is based on the Louvain method, which is a popular and efficient algorithm for detecting communities in networks. The Louvain method aims to optimize a quality function known as modularity, which measures the strength of division of a network into communities.
-
-```{r}
-edges_df2 <- MC2_graph %>%
-  activate(edges) %>%
-  as.tibble()
-
-nodes_df2 <- MC2_graph %>%
-  activate(nodes) %>%
-  as.tibble() %>%
-  rename(label = id) %>%
-  mutate(id=row_number()) %>%
-  select(id, label)
-
-# Convert the graph to undirected
-MC2_graph_undirected <- as.undirected(MC2_graph)
-
-# Perform community detection using the Louvain algorithm on the undirected graph
-communities <- cluster_louvain(MC2_graph_undirected)
-
-# Get the cluster membership of each node
-membership <- membership(communities)
-
-# Add the cluster membership information to the nodes data frame
-nodes_df2$group <- membership
-
-# Plot the graph with clustered nodes using visNetwork
-visNetwork(nodes_df2, edges_df2) %>%
-  visIgraphLayout(layout = "layout_with_fr") %>%
-  visEdges(arrows = "to",
-           smooth = list(enabled = TRUE, type = "curvedCW"), 
-           color = list(highlight = "lightgray")) %>%
-  visOptions(highlightNearest = list(enabled = TRUE, degree = 1, hover = TRUE, labelOnly = TRUE),
-             nodesIdSelection = TRUE,
-             selectedBy = "group") %>%
-  visLayout(randomSeed = 1234)
-```
-
-**cluster_louvain**
-
-In the `cluster_louvain` plot, it presences 8 small clusters suggests that the algorithm has identified distinct communities within the graph based on the optimization of modularity. These smaller clusters indicate subsets of nodes that are more densely connected internally and have fewer connections between them compared to the cluster_edge_betweenness result.
-:::
-
-In our case, we would like to identify a clearer communities that potentially represent separate business cluster, `cluster_louvain` can be good choice. As it tends to produce well-separated communities with higher modularity score so I can capture smaller but tightly-knit communities within a larger network.
