@@ -41,7 +41,7 @@ Represent the relationships between companies and their fishing activities as a 
 The following code chunks will install and load the required packages.
 
 ```{r}
-pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, tidyverse, lubridate, igraph, ggiraph, ggplot2, ggthemes, patchwork, plotly, ggstatsplot, hrbrthemes)
+pacman::p_load(jsonlite, tidygraph, ggraph, visNetwork, tidyverse, igraph, ggiraph, ggplot2, ggthemes, patchwork, plotly, ggstatsplot, hrbrthemes)
 ```
 
 ## Load the dataset in JSON format
@@ -222,7 +222,7 @@ Such patterns could be attributed to the majority of fisheries operating in acco
 
 ### Time series Analysis
 
-#### Shipment By Product Type 
+#### Shipment By Product Type
 
 ```{r}
 grp2 <- MC2_edges_clean_mapped %>%
@@ -260,7 +260,7 @@ MC2_edges_aggregated <- MC2_edges_clean_mapped %>%
   filter(year %in% c(2033)) %>%
   filter(month %in% c(7, 8, 9)) %>%
   filter(fishtype != "not fish") %>%
-  group_by(source, target, fishtype, year) %>%
+  group_by(source, target, fishtype) %>%
   summarise(Weight = n()) %>%
   filter(source != target) %>%
   filter(Weight > 20) %>%
@@ -304,7 +304,26 @@ MC2_graph <- tbl_graph(nodes = MC2_nodes_extracted,
 MC2_graph  
 ```
 
+```{r}
+set_graph_style()
+
+g <- ggraph(MC2_graph, 
+            layout = "fr") + 
+  geom_edge_link(aes(width=Weight), 
+                 alpha=0.2) +
+  scale_edge_width(range = c(0.1, 5)) +
+  geom_node_point(aes(colour = group), 
+                  size = 2)
+  
+g + facet_nodes(~group)+
+  th_foreground(foreground = "grey80",  
+                border = TRUE) +
+  theme(legend.position = 'bottom')
+```
+
 ### Plot Network Graph
+
+#### **Plotting of Network using Eigenvector Centrality**
 
 Degree centrality only takes into account the number of edges for each node, but it leaves out information about ego's alters.
 
@@ -371,7 +390,7 @@ Hypothesis testing: Does types of fishing affect eigen betweenness score?
 MC2_edges_aggregated_r <- MC2_edges_clean_mapped %>%
   #filter(year %in% c(2028)) %>%
   filter(fishtype !="not fish") %>%
-  group_by(source, target, fishtype, year) %>%
+  group_by(source, target, fishtype) %>%
   summarise(Weight = n()) %>%
   filter(source != target) %>%
   filter(Weight > 1) %>%
