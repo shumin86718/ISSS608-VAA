@@ -1,0 +1,668 @@
+---
+title: "Take-home_Ex3"
+editor: visual
+author: "Han Shumin"
+date: "2 Jun 2023"
+date-modified: "`r Sys.Date()`"
+format:
+  html:
+    code-fold: true
+    code-summary: "Show the code"
+execute: 
+  echo: true
+  eval: true
+  warning: false
+---
+
+# Overview
+
+## The task
+
+With reference to Mini-Challenge 3 of VAST Challenge 2023 and by using appropriate static and interactive statistical graphics methods, I will be revealing the:
+
+-   
+
+    xxx. 
+
+## Methodology
+
+xl. 
+
+# Data Preparation
+
+## Install and load the packages
+
+The following code chunks will install and load the required packages.
+
+```{r}
+pacman::p_load(jsonlite, tidygraph, ggraph, 
+               visNetwork, graphlayouts, ggforce, 
+               skimr, tidytext, tidyverse, igraph, wordcloud, RColorBrewer, stringr, cluster)
+
+
+```
+
+## Load the dataset in JSON format
+
+In the code chunk below, from `JSON()` of jsonlite package is used to import `MC3.json` into R environment.
+
+```{r}
+MC3 <- fromJSON("data/MC3.json")
+```
+
+## Data Wrangling
+
+### Extracting the nodes and links
+
+The code chunk is used to extract nodes/edges data tables from MC3 list object and save the output in a tibble data frame object called `MC3_nodes` and `MC3_edges`.
+
+```{r}
+MC3_nodes <- as_tibble(MC3$nodes) %>%
+  # distinct() %>%
+  mutate(country = as.character(country),
+         id = as.character(id),
+         product_services = as.character(product_services),
+         revenue_omu = as.numeric(as.character(revenue_omu)),
+         type = as.character(type)) %>%
+  select(id, country, type, revenue_omu, product_services)
+
+glimpse(MC3_nodes)
+```
+
+-   `mutate()` and `as.character()` are used to convert the field data type from list to character.
+
+-   To convert *revenue_omu* from list data type to numeric data type, we need to convert the values into character first by using `as.character()`. Then, `as.numeric()` will be used to convert them into numeric data type.
+
+-   `select()` is used to re-organise the order of the fields.
+
+```{r}
+MC3_edges <- as_tibble(MC3$links) %>%
+  distinct() %>%
+  mutate(source = as.character(source),
+         target = as.character(target),
+         type = as.character(type)) %>%
+  group_by(source, target, type) %>%
+  summarise(weights = n()) %>%
+  filter(source != target) %>%
+  ungroup()
+
+glimpse(MC3_edges)  
+```
+
+-   `distinct()` is used to ensure that there will be no duplicated records.
+
+-   `mutate()` and `as.character()` are used to convert the field data type from list to character.
+
+-   `group_by()` and `summarise()` are used to count the number of unique links.
+
+-   the `filter(source!=target)` is to ensure that no record with similar source and target.
+
+# Initial Data Exploration
+
+## Exploring the edges data frame
+
+In the code chunk below, [`skim()`](https://docs.ropensci.org/skimr/reference/skim.html) of [**skimr**](https://docs.ropensci.org/skimr/) package is used to display the summary statistics of *mc3_edges* tibble data frame.
+
+```{r}
+skim(MC3_edges)
+```
+
+The report above reveals that there is not missing values in all fields.
+
+In the code chunk below, `datatable()` of DT package is used to display MC3_edges tibble dataframe as an interactive table on the html document.
+
+```{r}
+DT::datatable(MC3_edges)
+```
+
+```{r}
+ggplot(data = MC3_edges,
+       aes(x = type)) +
+  geom_bar()
+```
+
+## **Initial Network Visualisation and Analysis**
+
+### **Building network model with tidygraph**
+
+```{r}
+id1 <- MC3_edges %>%
+  select(source) %>%
+  rename(id = source)
+
+id2 <- MC3_edges %>%
+  select(id = target)
+
+MC3_nodes1 <- rbind(id1, id2) %>%
+  distinct() %>%
+  left_join(MC3_nodes, unmatched = "drop")
+```
+
+```{r}
+MC3_graph <- tbl_graph(nodes = MC3_nodes1,
+                       edges = MC3_edges,
+                       directed = FALSE) %>%
+  mutate(betweenness_centrality = centrality_betweenness(),
+         closeness_centrality = as.factor(centrality_closeness())) %>%
+  mutate(degree_centrality = centrality_degree()) %>%
+  filter(betweenness_centrality >= 30000) %>%
+  filter(degree_centrality >= 3)
+         
+
+```
+
+```{r}
+# Calculate the degrees of each node
+degrees <- degree(MC3_graph)
+set.seed (1234)
+MC3_graph %>%
+  # filter(betweenness_centrality >= 100000) %>%
+ggraph(layout = "fr") +
+  geom_edge_link(aes(alpha = 0.5)) +
+  geom_node_point(aes(size = betweenness_centrality,
+                      color = closeness_centrality,
+                      alpha = 0.5), show.legend = FALSE) +
+  geom_node_text(aes(label = ifelse(degrees > 3, as.character(id), "")), size = 2) +  # Add node labels
+  scale_size_continuous(range = c(1, 10)) +
+  theme_graph()
+
+
+
+```
+
+```{r}
+MC3_graph <- tbl_graph(nodes = MC3_nodes1,
+                       edges = MC3_edges,
+                       directed = FALSE) %>%
+  mutate(betweenness_centrality = centrality_betweenness()) %>%
+  filter(betweenness_centrality >= 10000)
+
+quantile_graph <- quantile(eigen_centrality(MC3_graph)$vector,
+         probs = seq(0, 1, 1/10)
+         )
+V(MC3_graph)$size = eigen_centrality(MC3_graph)$vector
+
+MC3_graph_aggregated <- delete_vertices(MC3_graph, V(MC3_graph)[size < quantile_graph[10]])
+
+
+set.seed (1234)
+layout1 <- layout_with_fr(MC3_graph_aggregated)
+
+quantile_graph_aggregated <- quantile(V(MC3_graph_aggregated)$size, #identify top 20% of the new vertices
+         probs = seq(0, 1, 1/10)
+         )
+
+
+V(MC3_graph_aggregated)$color <- ifelse (V(MC3_graph_aggregated)$size > quantile_graph_aggregated[10], "darkgoldenrod3", "azure3") #color yellow if vertices is top 20%
+E(MC3_graph_aggregated)$color <- "grey"
+V(MC3_graph_aggregated)$size <- V(MC3_graph_aggregated)$size/0.065 
+#Increase the size of nodes based on their centrality score, only those with high score will be visible
+
+V(MC3_graph_aggregated)$id <- ifelse (V(MC3_graph_aggregated)$size*0.065 > quantile_graph_aggregated[10],V(MC3_graph_aggregated)$id,NA)
+#label the vertices if vertices belongs to the top 20%
+
+
+plot(MC3_graph_aggregated, edge.arrow.size = 0.25, edge.arrow.mode = "-", 
+     vertex.label = V(MC3_graph_aggregated)$id, vertex.label.cex = 0.65, 
+     vertex.label.font = 1, main = "Which companies are having more edges to other nodes?")
+
+```
+
+
+## **Exploring the nodes data frame**
+
+In the code chunk below, [`skim()`](https://docs.ropensci.org/skimr/reference/skim.html) of [**skimr**](https://docs.ropensci.org/skimr/) package is used to display the summary statistics of *MC3_nodes* tibble data frame.
+
+```{r}
+skim(MC3_nodes)
+```
+
+The report above reveals that there is no missing values in all fields.
+
+In the code chunk below, `datatable()` of DT package is used to display mc3_nodes tibble data frame as an interactive table on the html document.
+
+```{r}
+DT::datatable(MC3_nodes)
+```
+
+```{r}
+ggplot(data = MC3_nodes,
+       aes(x = type)) +
+  geom_bar()
+```
+
+## **Text Sensing with tidytext**
+
+In this section, you will learn how to perform basic text sensing using appropriate functions of [**tidytext**](https://juliasilge.github.io/tidytext/) package.
+
+### **Simple word count**
+
+The code chunk below calculates number of times the word *fish* appeared in the field *product_services*.
+
+```{r}
+MC3_nodes %>%
+  mutate(n_fish = str_count(product_services, "fish"))
+```
+
+```{r}
+MC3_nodes %>%
+  mutate(n_seafood = str_count(product_services, "seafood"))
+```
+
+### **Tokenisation**
+
+The word tokenisation have different meaning in different scientific domains. In text sensing, **tokenisation** is the process of breaking up a given text into units called **tokens**. Tokens can be individual words, phrases or even whole sentences. In the process of tokenisation, some characters like punctuation marks may be discarded. The tokens usually become the input for the processes like parsing and text mining.
+
+In the code chunk below, [`unnest_token()`](https://juliasilge.github.io/tidytext/reference/unnest_tokens.html) of tidytext is used to split text in *product_services* field into words.
+
+```{r}
+token_nodes <- MC3_nodes %>%
+  unnest_tokens(word, product_services)
+```
+
+The two basic arguments to `unnest_tokens()` used here are column names. First we have the output column name that will be created as the text is unnested into it (*word*, in this case), and then the input column that the text comes from (*product_services*, in this case).
+
+::: callout-note
+-   By default, punctuation has been stripped. (Use the *to_lower = FALSE* argument to turn off this behavior).
+
+-   By default, `unnest_tokens()` converts the tokens to lowercase, which makes them easier to compare or combine with other datasets. (Use the *to_lower = FALSE* argument to turn off this behavior).
+:::
+
+Now we can visualise the words extracted by using the code chunk below.
+
+```{r}
+token_nodes %>%
+  count(word, sort = TRUE) %>%
+  top_n(15) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(x = word, y=n)) +
+  geom_col() +
+  xlab(NULL) +
+  coord_flip() +
+    labs(x = "Count",
+         y = "Unique words",
+         title = "Count of unique words found in product_services field")
+  
+```
+
+The bar chart reveals that the unique words contains some words that may not be useful to use. For instance "a" and "to". In the word of text mining we call those words **stop words**. You want to remove these words from your analysis as they are fillers used to compose a sentence.
+
+### **Removing stopwords**
+
+The tidytext package has a function called [`stop_words`](https://juliasilge.github.io/tidytext/reference/stop_words.html) that will help us clean up stop words.
+
+```{r}
+stopwords_removed <- token_nodes %>%
+  anti_join(stop_words)
+```
+
+::: callout-note
+-   Load the stop_words data included with tidytext. This data is simply a list of words that you may want to remove in a natural language analysis.
+
+-   Then `anti_join()` of dplyr package is used to remove all stop words from the analysis.
+:::
+
+We can visualise the words extracted again.
+
+```{r}
+stopwords_removed %>%
+  count(word, sort = TRUE) %>%
+  top_n(20) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(x = word, y=n)) +
+  geom_col() +
+  xlab(NULL) +
+  coord_flip() +
+    labs(x = "Count",
+         y = "Unique words",
+         title = "Count of unique words found in product_services field (removed stopwords)")
+```
+
+```{r}
+glimpse(stopwords_removed)
+```
+
+```{r}
+edges_df <- MC3_graph %>%
+  activate(edges) %>%
+  as.tibble()
+
+nodes_df <- MC3_graph %>%
+  activate(nodes) %>%
+  as.tibble() %>%
+  rename(label = id) %>%
+  mutate(id=row_number()) %>%
+  select(id, label)
+
+ # Convert the graph to undirected
+MC3_graph_undirected <- as.undirected(MC3_graph)
+
+# Perform community detection using the Louvain algorithm on the undirected graph
+communities <- cluster_louvain(MC3_graph)
+
+# Get the cluster membership of each node
+membership <- membership(communities)
+
+# Add the cluster membership information to the nodes data frame
+nodes_df$group <- membership
+
+# Plot the graph with clustered nodes using visNetwork
+visNetwork(nodes_df, edges_df) %>%
+  visIgraphLayout(layout = "layout_with_fr") %>%
+  visEdges(arrows = "to",
+           smooth = list(enabled = TRUE, type = "curvedCW"), 
+           color = list(highlight = "lightgray")) %>%
+  visOptions(highlightNearest = list(enabled = TRUE, degree = 1, hover = TRUE, labelOnly = TRUE),
+             nodesIdSelection = TRUE) %>%
+  visLayout(randomSeed = 1234)
+
+
+```
+
+```{r}
+df_temp <- stopwords_removed %>%
+  select(id, word) %>%
+  rename(label = id)
+
+merged_df <- merge(nodes_df, df_temp, by = "label")
+
+glimpse(merged_df)
+
+top_words <- merged_df %>%
+  count(group, word, sort = TRUE) %>%
+  group_by(group) %>%
+  top_n(n = 1)  # Select the top frequent word in each group
+
+ggplot(top_words, aes(x = group, y = n, fill = word)) +
+  geom_col() +
+  labs(x = "Group", y = "Frequency", fill = "Word") +
+  theme_minimal()
+```
+
+
+
+```{r}
+
+df_wordcloud <- stopwords_removed
+
+# Count the frequency of each word
+word_frequency <- df_wordcloud %>%
+  group_by(word) %>%
+  filter(!word %in% c("character", "0", "unknown")) %>%
+  summarise(freq = n()) %>%
+  arrange(desc(freq))
+
+# Create a word cloud
+set.seed(1234)  # for reproducibility of random colors
+wordcloud(words = word_frequency$word, freq = word_frequency$freq, min.freq = 10
+          ,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+
+```
+
+## Visualize different keyword
+
+::: panel-tabset 
+## products
+
+```{r}
+df <- stopwords_removed
+
+# Filter the data frame
+df_extracted <- df %>%
+  filter(str_detect(word, pattern = "products"))
+
+# Remove duplicate IDs
+df_extracted_distinct <- df_extracted %>%
+  distinct(id, keep_all = TRUE)
+
+# Network visualisation for products related companies 
+
+id3 <- MC3_edges %>%
+  select(source) %>%
+  rename(id = source)
+
+id4 <- MC3_edges %>%
+  select(id = target)
+
+MC3_nodes_extracted <- rbind(id3, id4) %>%
+  distinct() %>%
+  left_join(df_extracted_distinct, unmatched = "drop")
+
+MC3_graph_extracted <- tbl_graph(nodes = MC3_nodes_extracted,
+                       edges = MC3_edges,
+                       directed = FALSE) %>%
+  mutate(betweenness_centrality = centrality_betweenness()
+         ) %>%
+  filter(betweenness_centrality >= quantile(betweenness_centrality, 0.99))
+
+
+#create Visnetwork graph
+edges_df1 <- MC3_graph_extracted %>%
+  activate(edges) %>%
+  as.tibble()
+
+nodes_df1 <- MC3_graph_extracted %>%
+  activate(nodes) %>%
+  as.tibble() %>%
+  rename(label = id) %>%
+  mutate(id=row_number()) %>%
+  select(id, label)
+
+# # Convert the graph to undirected
+# MC3_graph_undirected <- as.undirected(MC3_graph)
+
+# Perform community detection using the Louvain algorithm on the undirected graph
+communities <- cluster_louvain(MC3_graph_extracted)
+
+# Get the cluster membership of each node
+membership <- membership(communities)
+
+# Add the cluster membership information to the nodes data frame
+nodes_df1$group <- membership
+
+# Plot the graph with clustered nodes using visNetwork
+visNetwork(nodes_df1, edges_df1) %>%
+  visIgraphLayout(layout = "layout_with_fr") %>%
+  visEdges(arrows = "to",
+           smooth = list(enabled = TRUE, type = "curvedCW"), 
+           color = list(highlight = "lightgray")) %>%
+  visOptions(highlightNearest = list(enabled = TRUE, degree = 1, hover = TRUE, labelOnly = TRUE),
+             nodesIdSelection = TRUE,
+             selectedBy = "group") %>%
+  visLayout(randomSeed = 1234)
+
+
+```
+
+## fish and seafood
+
+
+```{r}
+df <- stopwords_removed
+
+# Filter the data frame
+df_extracted <- df %>%
+  filter(str_detect(word, pattern = "fish") | str_detect(word, pattern = "seafood"))
+
+# Remove duplicate IDs
+df_extracted_distinct <- df_extracted %>%
+  distinct(id, keep_all = TRUE)
+
+# Network visualisation for fish and seafood related companies 
+
+id3 <- MC3_edges %>%
+  select(source) %>%
+  rename(id = source)
+
+id4 <- MC3_edges %>%
+  select(id = target)
+
+MC3_nodes_extracted <- rbind(id3, id4) %>%
+  distinct() %>%
+  left_join(df_extracted_distinct, unmatched = "drop")
+
+MC3_graph_extracted <- tbl_graph(nodes = MC3_nodes_extracted,
+                       edges = MC3_edges,
+                       directed = FALSE) %>%
+  mutate(betweenness_centrality = centrality_betweenness()
+         ) %>%
+  filter(betweenness_centrality >= quantile(betweenness_centrality, 0.99))
+
+
+#create Visnetwork graph
+edges_df1 <- MC3_graph_extracted %>%
+  activate(edges) %>%
+  as.tibble()
+
+nodes_df1 <- MC3_graph_extracted %>%
+  activate(nodes) %>%
+  as.tibble() %>%
+  rename(label = id) %>%
+  mutate(id=row_number()) %>%
+  select(id, label)
+
+# # Convert the graph to undirected
+# MC3_graph_undirected <- as.undirected(MC3_graph)
+
+# Perform community detection using the Louvain algorithm on the undirected graph
+communities <- cluster_louvain(MC3_graph_extracted)
+
+# Get the cluster membership of each node
+membership <- membership(communities)
+
+# Add the cluster membership information to the nodes data frame
+nodes_df1$group <- membership
+
+# Plot the graph with clustered nodes using visNetwork
+visNetwork(nodes_df1, edges_df1) %>%
+  visIgraphLayout(layout = "layout_with_graphopt") %>%
+  visEdges(arrows = "to",
+           smooth = list(enabled = TRUE, type = "curvedCW"), 
+           color = list(highlight = "lightgray")) %>%
+  visOptions(highlightNearest = list(enabled = TRUE, degree = 1, hover = TRUE, labelOnly = TRUE),
+             nodesIdSelection = TRUE,
+             selectedBy = "group") %>%
+  visLayout(randomSeed = 1234)
+
+
+```
+
+## frozen
+
+```{r}
+df <- stopwords_removed
+
+# Filter the data frame
+df_extracted <- df %>%
+  filter(str_detect(word, pattern = "frozen") )
+
+# Remove duplicate IDs
+df_extracted_distinct <- df_extracted %>%
+  distinct(id, keep_all = TRUE)
+
+# Network visualisation for products related companies 
+
+id3 <- MC3_edges %>%
+  select(source) %>%
+  rename(id = source)
+
+id4 <- MC3_edges %>%
+  select(id = target)
+
+MC3_nodes_extracted <- rbind(id3, id4) %>%
+  distinct() %>%
+  left_join(df_extracted_distinct, unmatched = "drop")
+
+MC3_graph_extracted <- tbl_graph(nodes = MC3_nodes_extracted,
+                       edges = MC3_edges,
+                       directed = FALSE) %>%
+  mutate(betweenness_centrality = centrality_betweenness()) %>%
+  filter(betweenness_centrality >= quantile(betweenness_centrality, 0.99))
+
+
+#create Visnetwork graph
+edges_df1 <- MC3_graph_extracted %>%
+  activate(edges) %>%
+  as.tibble()
+
+nodes_df1 <- MC3_graph_extracted %>%
+  activate(nodes) %>%
+  as.tibble() %>%
+  rename(label = id) %>%
+  mutate(id=row_number()) %>%
+  select(id, label)
+
+# # Convert the graph to undirected
+# MC3_graph_undirected <- as.undirected(MC3_graph)
+
+# Perform community detection using the Louvain algorithm on the undirected graph
+communities <- cluster_louvain(MC3_graph_extracted)
+
+# Get the cluster membership of each node
+membership <- membership(communities)
+
+# Add the cluster membership information to the nodes data frame
+nodes_df1$group <- membership
+
+# Plot the graph with clustered nodes using visNetwork
+visNetwork(nodes_df1, edges_df1) %>%
+  visIgraphLayout(layout = "layout_with_fr") %>%
+  visEdges(arrows = "to",
+           smooth = list(enabled = TRUE, type = "curvedCW"), 
+           color = list(highlight = "lightgray")) %>%
+  visOptions(highlightNearest = list(enabled = TRUE, degree = 1, hover = TRUE, labelOnly = TRUE),
+             nodesIdSelection = TRUE,
+             selectedBy = "group") %>%
+  visLayout(randomSeed = 1234)
+```
+
+
+
+
+
+:::
+
+
+```{r}
+df <- stopwords_removed
+
+# Filter the data frame
+df_extracted <- df %>%
+  filter(str_detect(word, pattern = "fish") | str_detect(word, pattern = "seafood"))
+
+# Remove duplicate IDs
+df_extracted_distinct <- df_extracted %>%
+  distinct(id, keep_all = TRUE)
+
+
+id3 <- MC3_edges %>%
+  select(source) %>%
+  rename(id = source)
+
+id4 <- MC3_edges %>%
+  select(id = target)
+
+MC3_nodes_extracted <- rbind(id3, id4) %>%
+  distinct() %>%
+  left_join(df_extracted_distinct, unmatched = "drop")
+
+MC3_graph_extracted <- tbl_graph(nodes = MC3_nodes_extracted,
+                       edges = MC3_edges,
+                       directed = FALSE)
+
+V(MC3_graph_extracted)$betweenness <- betweenness(MC3_graph_extracted, directed = F)
+
+
+plot(MC3_graph_extracted,
+     vertex.label.cex = .6, 
+     vertex.label.color = "black", 
+     vertex.size = V(MC3_graph_extracted)$betweenness/max(V(MC3_graph_extracted)$betweenness) * 50)
+```
+
+
+```{r}
+
+```
+
